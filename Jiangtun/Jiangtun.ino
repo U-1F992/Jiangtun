@@ -3,8 +3,7 @@
 CGamecubeConsole GamecubeConsole1(5);
 Gamecube_Data_t d = defaultGamecubeData;
 
-void setup()
-{
+void initialize_data() {
   d.report.a = 0;
   d.report.b = 0;
   d.report.x = 0;
@@ -23,6 +22,10 @@ void setup()
   d.report.cyAxis = 128;
   d.report.left = 0;
   d.report.right = 0;
+}
+
+void setup() {
+  initialize_data();
 
   // Omajinai
   d.report.start = 1;
@@ -33,46 +36,19 @@ void setup()
   Serial.begin(9600);
 }
 
-void convert_btns(uint16_t btns)
-{
-  // NX GC
-  // Y  y
-  // B  b
-  // A  a
-  // X  x
-  // L  l
-  // R  r
-  // ZL (none)
-  // ZR z
-  // -  (none)
-  // +  start
-  // L Click (none)
-  // R Click (none)
-  // Home    (none)
-  // Capture (none)
-  d.report.y     = btns & 0b0000000000000001;
-  d.report.b     = btns & 0b0000000000000010;
-  d.report.a     = btns & 0b0000000000000100;
-  d.report.x     = btns & 0b0000000000001000;
-  d.report.l     = btns & 0b0000000000010000;
-  d.report.r     = btns & 0b0000000000100000;
-  d.report.z     = btns & 0b0000000010000000;
-  d.report.start = btns & 0b0000001000000000;
+void convert_btns(uint16_t btns) {
+  d.report.y = (btns & 0b0000000000000001);
+  d.report.b = (btns & 0b0000000000000010) >> 1;
+  d.report.a = (btns & 0b0000000000000100) >> 2;
+  d.report.x = (btns & 0b0000000000001000) >> 3;
+  d.report.l = (btns & 0b0000000000010000) >> 4;
+  d.report.r = (btns & 0b0000000000100000) >> 5;
+  d.report.z = (btns & 0b0000000010000000) >> 7;
+  d.report.start = (btns & 0b0000001000000000) >> 9;
 }
 
-void convert_hat(uint8_t hat)
-{
-  // 0x00  ↑
-  // 0x01  ↗
-  // 0x02  →
-  // 0x03  ↘
-  // 0x04  ↓
-  // 0x05  ↙
-  // 0x06  ←
-  // 0x07  ↖
-  // 0x08  -
-  switch (hat)
-  {
+void convert_hat(uint8_t hat) {
+  switch (hat) {
     case 0x00:
       d.report.dup = 1;
       d.report.dright = 0;
@@ -138,61 +114,62 @@ void convert_hat(uint8_t hat)
   }
 }
 
-void convert_axis(uint8_t lx, uint8_t ly, uint8_t rx, uint8_t ry)
-{
+void convert_axis(uint8_t lx, uint8_t ly, uint8_t rx, uint8_t ry) {
   d.report.xAxis = lx;
-  d.report.yAxis = ly;
+  d.report.yAxis = 0xFF - ly;
   d.report.cxAxis = rx;
-  d.report.cyAxis = ry;
+  d.report.cyAxis = 0xFF - ry;
 }
 
-void update_data()
-{
-  if (!Serial.available())
-  {
-    return;
+int Serial_read() {
+  while (!Serial.available()) {
   }
-  
-  uint8_t head = Serial.read();
-  if (head != 0xAB)
-  {
+  return Serial.read();
+}
+
+void update_data() {
+  if (!Serial.available()) {
     return;
   }
 
-  uint8_t lower = Serial.read();
-  uint8_t upper = Serial.read();
+  uint8_t head = Serial_read();
+  if (head != 0xAB) {
+    Serial.println("invalid header");
+    return;
+  }
+
+  uint8_t lower = Serial_read();
+  uint8_t upper = Serial_read();
   uint16_t btns = lower | (upper << 8);
-  if (0b0011111111111111 < btns)
-  {
+  if (0b0011111111111111 < btns) {
+    Serial.println("invalid btns");
     return;
   }
 
-  uint8_t hat = Serial.read();
-  if (0x08 < hat)
-  {
+  uint8_t hat = Serial_read();
+  if (0x08 < hat) {
+    Serial.println("invalid hat");
     return;
   }
 
-  uint8_t lx = Serial.read();
-  uint8_t ly = Serial.read();
-  uint8_t rx = Serial.read();
-  uint8_t ry = Serial.read();
+  uint8_t lx = Serial_read();
+  uint8_t ly = Serial_read();
+  uint8_t rx = Serial_read();
+  uint8_t ry = Serial_read();
 
-  // not in use
-  Serial.read();
-  Serial.read();
-  Serial.read();
-  
+  // not in use for gamecube
+  Serial_read();
+  Serial_read();
+  Serial_read();
+
   convert_btns(btns);
   convert_hat(hat);
   convert_axis(lx, ly, rx, ry);
 }
 
-void loop()
-{
+void loop() {
   update_data();
-  if(!GamecubeConsole1.write(d))
-  {
-    Serial.println("not connected...");
+  if (!GamecubeConsole1.write(d)) {
+    Serial.println("not connected");
   }
 }
