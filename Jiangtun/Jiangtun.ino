@@ -138,19 +138,14 @@ void convert_hat(uint8_t hat)
   }
 }
 
-void convert_axis(uint8_t lx, uint8_t ly)
+void convert_axis(uint8_t lx, uint8_t ly, uint8_t rx, uint8_t ry)
 {
   d.report.xAxis = lx;
   d.report.yAxis = ly;
-}
-
-void convert_caxis(uint8_t rx, uint8_t ry)
-{
   d.report.cxAxis = rx;
   d.report.cyAxis = ry;
 }
 
-// https://scrapbox.io/yatsuna827827-12010999/Nintendo_Switch%E3%82%92%E6%93%8D%E4%BD%9C%E3%81%99%E3%82%8B%E3%83%97%E3%83%AD%E3%82%B0%E3%83%A9%E3%83%A0%E3%81%AE%E4%BB%95%E6%A7%98%E3%82%92%E8%AA%BF%E3%81%B9%E3%82%8B
 void update_data()
 {
   if (!Serial.available())
@@ -167,23 +162,30 @@ void update_data()
   uint8_t lower = Serial.read();
   uint8_t upper = Serial.read();
   uint16_t btns = lower | (upper << 8);
-  convert_btns(btns);
+  if (0b0011111111111111 < btns)
+  {
+    return;
+  }
 
   uint8_t hat = Serial.read();
-  convert_hat(hat);
+  if (0x08 < hat)
+  {
+    return;
+  }
 
   uint8_t lx = Serial.read();
   uint8_t ly = Serial.read();
-  convert_axis(lx, ly);
-
   uint8_t rx = Serial.read();
   uint8_t ry = Serial.read();
-  convert_caxis(rx, ry);
 
   // not in use
   Serial.read();
   Serial.read();
   Serial.read();
+  
+  convert_btns(btns);
+  convert_hat(hat);
+  convert_axis(lx, ly, rx, ry);
 }
 
 void loop()
