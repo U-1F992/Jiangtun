@@ -336,6 +336,7 @@ void loop()
         {
             convert_data();
             send_data();
+            clear();
         }
     }
     else if (1000 < timeout)
