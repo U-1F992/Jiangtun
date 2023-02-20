@@ -321,7 +321,7 @@ void send_data()
 
 void loop()
 {
-    if (Serial.available())
+    if (0 < Serial.available())
     {
         timeout = 0;
         data[index] = Serial.read();
