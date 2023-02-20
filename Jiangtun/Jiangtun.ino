@@ -5,6 +5,13 @@
 CGamecubeConsole GamecubeConsole1(5);
 Gamecube_Data_t d = defaultGamecubeData;
 
+const uint8_t BUTTONS_UPPER_ALL = 0b00111111;
+const uint8_t HAT_NEUTRAL = 0x08;
+
+uint8_t data[11];
+int index = 0;
+int timeout = 0;
+
 void initialize_data()
 {
     d.report.a = 0;
@@ -40,7 +47,70 @@ void setup()
     Serial.begin(9600);
 }
 
-void convert_btns(uint16_t buttons)
+void clear()
+{
+    timeout = 0;
+    // memset(data, 0, sizeof(data));
+    index = 0;
+}
+
+bool validate_header()
+{
+    if (index != 0)
+    {
+        return true;
+    }
+    uint8_t header = data[index];
+    bool ret = header == 0xAB;
+    if (!ret)
+    {
+        Serial.print("Parse error: invalid header, ");
+        Serial.print(header);
+        Serial.print("\n");
+    }
+    return ret;
+}
+
+bool validate_buttons_upper()
+{
+    if (index != 2)
+    {
+        return true;
+    }
+    uint16_t buttons_upper = data[index];
+    bool ret = buttons_upper <= BUTTONS_UPPER_ALL;
+    if (!ret)
+    {
+        Serial.print("Parse error: invalid buttons_upper, ");
+        Serial.print(buttons_upper);
+        Serial.print("\n");
+    }
+    return ret;
+}
+
+bool validate_hat()
+{
+    if (index != 3)
+    {
+        return true;
+    }
+    uint8_t hat = data[index];
+    bool ret = hat <= HAT_NEUTRAL;
+    if (!ret)
+    {
+        Serial.print("Parse error: invalid hat, ");
+        Serial.print(hat);
+        Serial.print("\n");
+    }
+    return ret;
+}
+
+bool validate_data()
+{
+    return validate_header() && validate_buttons_upper() && validate_hat();
+}
+
+void convert_buttons(uint16_t buttons)
 {
     d.report.y = (buttons & 0b0000000000000001);
     d.report.b = (buttons & 0b0000000000000010) >> 1;
@@ -129,14 +199,7 @@ void convert_axis(uint8_t lx, uint8_t ly, uint8_t rx, uint8_t ry)
     d.report.cyAxis = 0xFF - ry;
 }
 
-int Serial_read()
-{
-    while (!Serial.available())
-    {
-    }
-    return Serial.read();
-}
-
+#ifdef DEBUG
 void pretty_print_nx(uint8_t header, uint16_t buttons, uint8_t hat, uint8_t lx, uint8_t ly, uint8_t rx, uint8_t ry, uint8_t ext0, uint8_t ext1, uint8_t ext2)
 {
     uint8_t y = (buttons & 0b0000000000000001);
@@ -220,54 +283,24 @@ void pretty_print_report()
     Serial.println(buffer);
     memcpy(previous, d.report.raw8, sizeof(previous));
 }
+#endif
 
-void update_data()
+void convert_data()
 {
-    if (!Serial.available())
-    {
-        return;
-    }
-
-    uint8_t header = Serial_read();
-    if (header != 0xAB)
-    {
-        char buffer[256];
-        sprintf(buffer, "Parse error: Invalid header, %d", header);
-        Serial.println(buffer);
-        return;
-    }
-
-    uint8_t lower = Serial_read();
-    uint8_t upper = Serial_read();
-    uint16_t buttons = lower | (upper << 8);
-    if (0b0011111111111111 < buttons)
-    {
-        char buffer[256];
-        sprintf(buffer, "Parse error: Invalid buttons, %d", buttons);
-        Serial.println(buffer);
-        return;
-    }
-
-    uint8_t hat = Serial_read();
-    if (0x08 < hat)
-    {
-        char buffer[256];
-        sprintf(buffer, "Parse error: Invalid hat, %d", hat);
-        Serial.println(buffer);
-        return;
-    }
-
-    uint8_t lx = Serial_read();
-    uint8_t ly = Serial_read();
-    uint8_t rx = Serial_read();
-    uint8_t ry = Serial_read();
+    uint8_t header = data[0];
+    uint16_t buttons = data[1] | (data[2] << 8);
+    uint8_t hat = data[3];
+    uint8_t lx = data[4];
+    uint8_t ly = data[5];
+    uint8_t rx = data[6];
+    uint8_t ry = data[7];
 
     // not in use for gamecube
-    uint8_t ext0 = Serial_read();
-    uint8_t ext1 = Serial_read();
-    uint8_t ext2 = Serial_read();
+    uint8_t ext0 = data[8];
+    uint8_t ext1 = data[9];
+    uint8_t ext2 = data[10];
 
-    convert_btns(buttons);
+    convert_buttons(buttons);
     convert_hat(hat);
     convert_axis(lx, ly, rx, ry);
 
@@ -277,11 +310,41 @@ void update_data()
 #endif
 }
 
+void send_data()
+{
+    bool ret = GamecubeConsole1.write(d);
+    if (!ret)
+    {
+        Serial.println("Send error: not connected");
+    }
+}
+
 void loop()
 {
-    update_data();
-    if (!GamecubeConsole1.write(d))
+    if (Serial.available())
     {
-        Serial.println("not connected");
+        timeout = 0;
+        data[index] = Serial.read();
+        if (!validate_data())
+        {
+            clear();
+            return;
+        }
+        index++;
+
+        if (index == 11)
+        {
+            convert_data();
+            send_data();
+        }
+    }
+    else if (1000 < timeout)
+    {
+        Serial.print("Parse error: timeout");
+        clear();
+    }
+    else
+    {
+        timeout++;
     }
 }
