@@ -1,5 +1,7 @@
 #include "Nintendo.h"
 
+// #define DEBUG
+
 CGamecubeConsole GamecubeConsole1(5);
 Gamecube_Data_t d = defaultGamecubeData;
 
@@ -155,7 +157,7 @@ void pretty_print_nx(uint8_t header, uint16_t buttons, uint8_t hat, uint8_t lx, 
     char buffer[256];
     sprintf(
         buffer,
-        "\"header\":%d,\"y\":%d,\"b\":%d,\"a\":%d,\"x\":%d,\"l\":%d,\"r\":%d,\"zl\":%d,\"zr\":%d,\"plus\":%d,\"minus\":%d,\"lclick\":%d,\"rclick\":%d,\"home\":%d,\"capture\":%d,\"lx\":%d,\"ly\":%d,\"rx\":%d,\"ry\":%d,\"ext0\":%d,\"ext1\":%d,\"ext2\":%d",
+        "{\"header\":%d,\"y\":%d,\"b\":%d,\"a\":%d,\"x\":%d,\"l\":%d,\"r\":%d,\"zl\":%d,\"zr\":%d,\"plus\":%d,\"minus\":%d,\"lclick\":%d,\"rclick\":%d,\"home\":%d,\"capture\":%d,\"lx\":%d,\"ly\":%d,\"rx\":%d,\"ry\":%d,\"ext0\":%d,\"ext1\":%d,\"ext2\":%d}",
         header,
         y,
         b,
@@ -192,7 +194,7 @@ void pretty_print_report()
     char buffer[256];
     sprintf(
         buffer,
-        "\"a\":%d,\"b\":%d,\"x\":%d,\"y\":%d,\"start\":%d,\"origin\":%d,\"errlatch\":%d,\"errstat\":%d,\"dleft\":%d,\"dright\":%d,\"ddown\":%d,\"dup\":%d,\"z\":%d,\"r\":%d,\"l\":%d,\"high1\":%d,\"xAxis\":%d,\"yAxis\":%d,\"cxAxis\":%d,\"cyAxis\":%d,\"left\":%d,\"right\":%d",
+        "{\"a\":%d,\"b\":%d,\"x\":%d,\"y\":%d,\"start\":%d,\"origin\":%d,\"errlatch\":%d,\"errstat\":%d,\"dleft\":%d,\"dright\":%d,\"ddown\":%d,\"dup\":%d,\"z\":%d,\"r\":%d,\"l\":%d,\"high1\":%d,\"xAxis\":%d,\"yAxis\":%d,\"cxAxis\":%d,\"cyAxis\":%d,\"left\":%d,\"right\":%d}",
         d.report.a,
         d.report.b,
         d.report.x,
@@ -265,13 +267,14 @@ void update_data()
     uint8_t ext1 = Serial_read();
     uint8_t ext2 = Serial_read();
 
-    pretty_print_nx(header, buttons, hat, lx, ly, rx, ry, ext0, ext1, ext2);
-
     convert_btns(buttons);
     convert_hat(hat);
     convert_axis(lx, ly, rx, ry);
 
+#ifdef DEBUG
+    pretty_print_nx(header, buttons, hat, lx, ly, rx, ry, ext0, ext1, ext2);
     pretty_print_report();
+#endif
 }
 
 void loop()
