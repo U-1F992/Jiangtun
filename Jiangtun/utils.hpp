@@ -1,5 +1,5 @@
-#ifndef JIANGTUN_REPORT_H_
-#define JIANGTUN_REPORT_H_
+#ifndef JIANGTUN_UTILS_H_
+#define JIANGTUN_UTILS_H_
 
 #include "Nintendo.h"
 
@@ -51,26 +51,26 @@ typedef union
     };
 } NXReport;
 
-inline void initialize(Gamecube_Report_t &report)
+inline void initialize(Gamecube_Report_t &gc_report)
 {
-    report.a = 0;
-    report.b = 0;
-    report.x = 0;
-    report.y = 0;
-    report.start = 0;
-    report.dleft = 0;
-    report.dright = 0;
-    report.ddown = 0;
-    report.dup = 0;
-    report.z = 0;
-    report.r = 0;
-    report.l = 0;
-    report.xAxis = 128;
-    report.yAxis = 128;
-    report.cxAxis = 128;
-    report.cyAxis = 128;
-    report.left = 0;
-    report.right = 0;
+    gc_report.a = 0;
+    gc_report.b = 0;
+    gc_report.x = 0;
+    gc_report.y = 0;
+    gc_report.start = 0;
+    gc_report.dleft = 0;
+    gc_report.dright = 0;
+    gc_report.ddown = 0;
+    gc_report.dup = 0;
+    gc_report.z = 0;
+    gc_report.r = 0;
+    gc_report.l = 0;
+    gc_report.xAxis = 128;
+    gc_report.yAxis = 128;
+    gc_report.cxAxis = 128;
+    gc_report.cyAxis = 128;
+    gc_report.left = 0;
+    gc_report.right = 0;
 }
 
 const uint8_t HEADER = 0xAB;
@@ -84,103 +84,103 @@ inline bool is_valid(const NXReport &nx_report, const int index)
     return is_valid_header && is_valid_buttons_upper && is_valid_hat;
 }
 
-inline void buttons_(const NXReport &nx_report, Gamecube_Report_t &report)
+inline void buttons_(const NXReport &nx_report, Gamecube_Report_t &gc_report)
 {
-    report.y = nx_report.y;
-    report.b = nx_report.b;
-    report.a = nx_report.a;
-    report.x = nx_report.x;
-    report.l = nx_report.l;
-    report.r = nx_report.r;
-    report.z = nx_report.zr;
-    report.start = nx_report.plus;
+    gc_report.y = nx_report.y;
+    gc_report.b = nx_report.b;
+    gc_report.a = nx_report.a;
+    gc_report.x = nx_report.x;
+    gc_report.l = nx_report.l;
+    gc_report.r = nx_report.r;
+    gc_report.z = nx_report.zr;
+    gc_report.start = nx_report.plus;
 }
 
-inline void hat_(const NXReport &nx_report, Gamecube_Report_t &report)
+inline void hat_(const NXReport &nx_report, Gamecube_Report_t &gc_report)
 {
     switch (nx_report.hat)
     {
     case UP:
-        report.dup = 1;
-        report.dright = 0;
-        report.ddown = 0;
-        report.dleft = 0;
+        gc_report.dup = 1;
+        gc_report.dright = 0;
+        gc_report.ddown = 0;
+        gc_report.dleft = 0;
         break;
 
     case UP_RIGHT:
-        report.dup = 1;
-        report.dright = 1;
-        report.ddown = 0;
-        report.dleft = 0;
+        gc_report.dup = 1;
+        gc_report.dright = 1;
+        gc_report.ddown = 0;
+        gc_report.dleft = 0;
         break;
 
     case RIGHT:
-        report.dup = 0;
-        report.dright = 1;
-        report.ddown = 0;
-        report.dleft = 0;
+        gc_report.dup = 0;
+        gc_report.dright = 1;
+        gc_report.ddown = 0;
+        gc_report.dleft = 0;
         break;
 
     case DOWN_RIGHT:
-        report.dup = 0;
-        report.dright = 1;
-        report.ddown = 1;
-        report.dleft = 0;
+        gc_report.dup = 0;
+        gc_report.dright = 1;
+        gc_report.ddown = 1;
+        gc_report.dleft = 0;
         break;
 
     case DOWN:
-        report.dup = 0;
-        report.dright = 0;
-        report.ddown = 1;
-        report.dleft = 0;
+        gc_report.dup = 0;
+        gc_report.dright = 0;
+        gc_report.ddown = 1;
+        gc_report.dleft = 0;
         break;
 
     case DOWN_LEFT:
-        report.dup = 0;
-        report.dright = 0;
-        report.ddown = 1;
-        report.dleft = 1;
+        gc_report.dup = 0;
+        gc_report.dright = 0;
+        gc_report.ddown = 1;
+        gc_report.dleft = 1;
         break;
 
     case LEFT:
-        report.dup = 0;
-        report.dright = 0;
-        report.ddown = 0;
-        report.dleft = 1;
+        gc_report.dup = 0;
+        gc_report.dright = 0;
+        gc_report.ddown = 0;
+        gc_report.dleft = 1;
         break;
 
     case UP_LEFT:
-        report.dup = 1;
-        report.dright = 0;
-        report.ddown = 0;
-        report.dleft = 1;
+        gc_report.dup = 1;
+        gc_report.dright = 0;
+        gc_report.ddown = 0;
+        gc_report.dleft = 1;
         break;
 
     case NEUTRAL:
-        report.dup = 0;
-        report.dright = 0;
-        report.ddown = 0;
-        report.dleft = 0;
+        gc_report.dup = 0;
+        gc_report.dright = 0;
+        gc_report.ddown = 0;
+        gc_report.dleft = 0;
         break;
     }
 }
 
-inline void axis_(const NXReport &nx_report, Gamecube_Report_t &report)
+inline void axis_(const NXReport &nx_report, Gamecube_Report_t &gc_report)
 {
-    report.xAxis = nx_report.lx;
-    report.yAxis = 0xFF - nx_report.ly;
-    report.cxAxis = nx_report.rx;
-    report.cyAxis = 0xFF - nx_report.ry;
+    gc_report.xAxis = nx_report.lx;
+    gc_report.yAxis = 0xFF - nx_report.ly;
+    gc_report.cxAxis = nx_report.rx;
+    gc_report.cyAxis = 0xFF - nx_report.ry;
 }
 
-inline void convert(const NXReport &nx_report, Gamecube_Report_t &report)
+inline void convert(const NXReport &nx_report, Gamecube_Report_t &gc_report)
 {
-    buttons_(nx_report, report);
-    hat_(nx_report, report);
-    axis_(nx_report, report);
+    buttons_(nx_report, gc_report);
+    hat_(nx_report, gc_report);
+    axis_(nx_report, gc_report);
 }
 
-inline void pretty_print(NXReport &report)
+inline void pretty_print(const NXReport &report)
 {
     char buffer[256];
     sprintf(
@@ -214,7 +214,7 @@ inline void pretty_print(NXReport &report)
 
 uint8_t previous[8];
 
-inline void pretty_print(Gamecube_Report_t &report)
+inline void pretty_print(const Gamecube_Report_t &report)
 {
     if (memcmp(previous, report.raw8, sizeof(previous)) == 0)
     {
@@ -250,4 +250,4 @@ inline void pretty_print(Gamecube_Report_t &report)
     memcpy(previous, report.raw8, sizeof(previous));
 }
 
-#endif // JIANGTUN_REPORT_H_
+#endif // JIANGTUN_UTILS_H_
