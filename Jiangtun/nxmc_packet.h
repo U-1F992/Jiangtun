@@ -1,9 +1,14 @@
-#ifndef JIANGTUN_UTILS_H_
-#define JIANGTUN_UTILS_H_
+#ifndef JIANGTUN_NXMC_PACKET_H_
+#define JIANGTUN_NXMC_PACKET_H_
 
 #include "Nintendo.h"
 
-enum Hat
+#define PACKET_LENGTH (11)
+#define HEADER_ (0xAB)
+#define BUTTONS_UPPER_INDEX_ (2)
+#define BUTTONS_UPPER_ALL_ (0b00111111)
+
+enum Hat_
 {
     UP,
     UP_RIGHT,
@@ -18,7 +23,7 @@ enum Hat
 
 typedef union
 {
-    uint8_t raw[11];
+    uint8_t raw[PACKET_LENGTH];
     struct
     {
         uint8_t header;
@@ -49,56 +54,31 @@ typedef union
         uint8_t ext1;
         uint8_t ext2;
     };
-} NXReport;
+} NXMCPacket;
 
-inline void initialize(Gamecube_Report_t &gc_report)
+inline bool is_valid_(const NXMCPacket &nxmc_packet)
 {
-    gc_report.a = 0;
-    gc_report.b = 0;
-    gc_report.x = 0;
-    gc_report.y = 0;
-    gc_report.start = 0;
-    gc_report.dleft = 0;
-    gc_report.dright = 0;
-    gc_report.ddown = 0;
-    gc_report.dup = 0;
-    gc_report.z = 0;
-    gc_report.r = 0;
-    gc_report.l = 0;
-    gc_report.xAxis = 128;
-    gc_report.yAxis = 128;
-    gc_report.cxAxis = 128;
-    gc_report.cyAxis = 128;
-    gc_report.left = 0;
-    gc_report.right = 0;
-}
-
-const uint8_t HEADER = 0xAB;
-const uint8_t BUTTONS_UPPER_ALL = 0b00111111;
-
-inline bool is_valid(const NXReport &nx_report, const int index)
-{
-    bool is_valid_header = index != 0 || nx_report.header == HEADER;
-    bool is_valid_buttons_upper = index != 2 || nx_report.raw[index] <= BUTTONS_UPPER_ALL;
-    bool is_valid_hat = index != 3 || nx_report.raw[index] <= NEUTRAL;
+    bool is_valid_header = nxmc_packet.header == HEADER_;
+    bool is_valid_buttons_upper = nxmc_packet.raw[BUTTONS_UPPER_INDEX_] <= BUTTONS_UPPER_ALL_;
+    bool is_valid_hat = nxmc_packet.hat <= NEUTRAL;
     return is_valid_header && is_valid_buttons_upper && is_valid_hat;
 }
 
-inline void buttons_(const NXReport &nx_report, Gamecube_Report_t &gc_report)
+inline void buttons_(const NXMCPacket &nxmc_packet, Gamecube_Report_t &gc_report)
 {
-    gc_report.y = nx_report.y;
-    gc_report.b = nx_report.b;
-    gc_report.a = nx_report.a;
-    gc_report.x = nx_report.x;
-    gc_report.l = nx_report.l;
-    gc_report.r = nx_report.r;
-    gc_report.z = nx_report.zr;
-    gc_report.start = nx_report.plus;
+    gc_report.y = nxmc_packet.y;
+    gc_report.b = nxmc_packet.b;
+    gc_report.a = nxmc_packet.a;
+    gc_report.x = nxmc_packet.x;
+    gc_report.l = nxmc_packet.l;
+    gc_report.r = nxmc_packet.r;
+    gc_report.z = nxmc_packet.zr;
+    gc_report.start = nxmc_packet.plus;
 }
 
-inline void hat_(const NXReport &nx_report, Gamecube_Report_t &gc_report)
+inline void hat_(const NXMCPacket &nxmc_packet, Gamecube_Report_t &gc_report)
 {
-    switch (nx_report.hat)
+    switch (nxmc_packet.hat)
     {
     case UP:
         gc_report.dup = 1;
@@ -165,22 +145,30 @@ inline void hat_(const NXReport &nx_report, Gamecube_Report_t &gc_report)
     }
 }
 
-inline void axis_(const NXReport &nx_report, Gamecube_Report_t &gc_report)
+inline void axis_(const NXMCPacket &nxmc_packet, Gamecube_Report_t &gc_report)
 {
-    gc_report.xAxis = nx_report.lx;
-    gc_report.yAxis = 0xFF - nx_report.ly;
-    gc_report.cxAxis = nx_report.rx;
-    gc_report.cyAxis = 0xFF - nx_report.ry;
+    gc_report.xAxis = nxmc_packet.lx;
+    gc_report.yAxis = 0xFF - nxmc_packet.ly;
+    gc_report.cxAxis = nxmc_packet.rx;
+    gc_report.cyAxis = 0xFF - nxmc_packet.ry;
 }
 
-inline void convert(const NXReport &nx_report, Gamecube_Report_t &gc_report)
+inline bool to_gamecube_report(const NXMCPacket &nxmc_packet, Gamecube_Report_t &gc_report)
 {
-    buttons_(nx_report, gc_report);
-    hat_(nx_report, gc_report);
-    axis_(nx_report, gc_report);
+    if (!is_valid_(nxmc_packet))
+    {
+        return false;
+    }
+    else
+    {
+        buttons_(nxmc_packet, gc_report);
+        hat_(nxmc_packet, gc_report);
+        axis_(nxmc_packet, gc_report);
+        return true;
+    }
 }
 
-inline void pretty_print(const NXReport &report)
+inline void print(const NXMCPacket &report)
 {
     char buffer[256];
     sprintf(
@@ -212,42 +200,4 @@ inline void pretty_print(const NXReport &report)
     Serial.println(buffer);
 }
 
-uint8_t previous[8];
-
-inline void pretty_print(const Gamecube_Report_t &report)
-{
-    if (memcmp(previous, report.raw8, sizeof(previous)) == 0)
-    {
-        return;
-    }
-    char buffer[256];
-    sprintf(
-        buffer,
-        "{\"a\":%d,\"b\":%d,\"x\":%d,\"y\":%d,\"start\":%d,\"origin\":%d,\"errlatch\":%d,\"errstat\":%d,\"dleft\":%d,\"dright\":%d,\"ddown\":%d,\"dup\":%d,\"z\":%d,\"r\":%d,\"l\":%d,\"high1\":%d,\"xAxis\":%d,\"yAxis\":%d,\"cxAxis\":%d,\"cyAxis\":%d,\"left\":%d,\"right\":%d}",
-        report.a,
-        report.b,
-        report.x,
-        report.y,
-        report.start,
-        report.origin,
-        report.errlatch,
-        report.errstat,
-        report.dleft,
-        report.dright,
-        report.ddown,
-        report.dup,
-        report.z,
-        report.r,
-        report.l,
-        report.high1,
-        report.xAxis,
-        report.yAxis,
-        report.cxAxis,
-        report.cyAxis,
-        report.left,
-        report.right);
-    Serial.println(buffer);
-    memcpy(previous, report.raw8, sizeof(previous));
-}
-
-#endif // JIANGTUN_UTILS_H_
+#endif // JIANGTUN_NXMC_PACKET_H_
