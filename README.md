@@ -1,6 +1,6 @@
 # Jiangtun（江豚）
 
-NX Macro Controller をゲームキューブ自動化に利用するための Arduino／Raspberry Pi Pico 用ファームウェア
+NX Macro Controller をゲームキューブ自動化に利用するための Arduino Uno／Raspberry Pi Pico 用ファームウェア
 
 ## Keys
 
