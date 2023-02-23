@@ -2,24 +2,38 @@
 
 #include "Nintendo.h"
 
-#include "nxmc_packet.h"
-#include "gamecube_report.h"
-#include "utils.h"
+#include "nxmc/nxmc.hpp"
+#include "nxmc/gc.hpp"
+#include "serial/logger.hpp"
+#include "serial/recieve.hpp"
+#include "utils.hpp"
 
-NXMCPacket nxmc_packet;
+CGamecubeConsole console(5);
+Gamecube_Data_t data = defaultGamecubeData;
 
-CGamecubeConsole gc_console(5);
-Gamecube_Data_t gc_data = defaultGamecubeData;
+SerialLogger logger;
+PacketHandler handler(
+    Recieve,
+    [](Packet &packet, Logger &logger)
+    {
+        ToReport(packet, data.report);
+#ifdef DEBUG
+        DebugPrint(logger, packet, data);
+#endif
+    },
+    [](const Packet packet, Logger &logger)
+    {
+        if (!console.write(data))
+        {
+            WarningNotConnected(logger);
+            return;
+        }
+    },
+    logger);
 
 void setup()
 {
-    initialize(gc_data.report);
-
-    // Omajinai to recognize the controller
-    gc_data.report.start = 1;
-    gc_console.write(gc_data);
-    gc_data.report.start = 0;
-    gc_console.write(gc_data);
+    Initialize(console, data);
 
     Serial.setTimeout(100);
     Serial.begin(9600);
@@ -27,10 +41,5 @@ void setup()
 
 void loop()
 {
-    if (0 < Serial.available())
-    {
-        read(nxmc_packet);
-        convert(nxmc_packet, gc_data);
-    }
-    write(gc_console, gc_data);
+    handler.Loop();
 }

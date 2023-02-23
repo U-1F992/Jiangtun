@@ -2,7 +2,7 @@
 
 NX Macro Controller をゲームキューブ自動化に利用するための Arduino／Raspberry Pi Pico 用ファームウェア
 
-## Key assign
+## Keys
 
 | NX Macro Controller | GameCube |
 | :-----------------: | :------: |
