@@ -1,8 +1,8 @@
-#ifndef JIANGTUN_NXMC_GC_H_
-#define JIANGTUN_NXMC_GC_H_
+#ifndef JIANGTUN_GC_H_
+#define JIANGTUN_GC_H_
 
 #include "Nintendo.h"
-#include "nxmc.hpp"
+#include "nxmc/nxmc.hpp"
 
 inline void RemapButtons_(const Packet &packet, Gamecube_Report_t &report)
 {
@@ -100,4 +100,4 @@ inline void ToReport(const Packet packet, Gamecube_Report_t &report)
     RemapAxis_(packet, report);
 }
 
-#endif // JIANGTUN_NXMC_GC_H_
+#endif // JIANGTUN_GC_H_

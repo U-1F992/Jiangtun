@@ -1,11 +1,9 @@
-// #define DEBUG
-
 #include "Nintendo.h"
 
 #include "nxmc/nxmc.hpp"
-#include "nxmc/gc.hpp"
 #include "serial/logger.hpp"
 #include "serial/recieve.hpp"
+#include "gc.hpp"
 #include "utils.hpp"
 
 CGamecubeConsole console(5);
@@ -17,9 +15,6 @@ PacketHandler handler(
     [](Packet &packet, Logger &logger)
     {
         ToReport(packet, data.report);
-#ifdef DEBUG
-        DebugPrint(logger, packet, data);
-#endif
     },
     [](const Packet packet, Logger &logger)
     {
