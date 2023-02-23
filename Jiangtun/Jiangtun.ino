@@ -1,3 +1,5 @@
+// #define DEBUG
+
 #include "Nintendo.h"
 
 #include "nxmc/nxmc.hpp"
@@ -15,6 +17,9 @@ PacketHandler handler(
     [](Packet &packet, Logger &logger)
     {
         ToReport(packet, data.report);
+#ifdef DEBUG
+        DebugPrint(logger, packet, data);
+#endif
     },
     [](const Packet packet, Logger &logger)
     {

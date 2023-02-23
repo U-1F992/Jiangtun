@@ -57,7 +57,7 @@ enum class Hat : uint8_t
     Neutral
 };
 
-inline bool is_valid(const Packet packet)
+inline bool IsValid(const Packet packet)
 {
     return (packet.header == HEADER_) && (packet._ == 0) && (packet.hat <= static_cast<uint8_t>(Hat::Neutral));
 }
@@ -66,20 +66,23 @@ class PacketHandler
 {
 public:
     PacketHandler(
-        void (*Recieve)(Packet &packet, Logger &logger),
+        bool (*Recieve)(Packet &packet, Logger &logger),
         void (*Filter)(Packet &packet, Logger &logger),
         void (*Send)(const Packet packet, Logger &logger),
         Logger &logger) : Recieve_(Recieve), Filter_(Filter), Send_(Send), logger_(logger) {}
     void Loop()
     {
-        Recieve_(packet_, logger_);
-        Filter_(packet_, logger_);
-        Send_(packet_, logger_);
+        Packet packet;
+
+        if (Recieve_(packet, logger_))
+        {
+            Filter_(packet, logger_);
+        }
+        Send_(packet, logger_);
     }
 
 private:
-    Packet packet_;
-    void (*Recieve_)(Packet &packet, Logger &logger);
+    bool (*Recieve_)(Packet &packet, Logger &logger);
     void (*Filter_)(Packet &packet, Logger &logger);
     void (*Send_)(const Packet packet, Logger &logger);
     Logger &logger_;

@@ -24,11 +24,11 @@ inline void WarningInvalidPacket_(Logger &logger, const Packet packet)
     logger.Warning(message);
 }
 
-void Recieve(Packet &packet, Logger &logger)
+bool Recieve(Packet &packet, Logger &logger)
 {
     if (Serial.available() == 0)
     {
-        return;
+        return false;
     }
 
     size_t packet_length = sizeof(packet.raw);
@@ -36,13 +36,15 @@ void Recieve(Packet &packet, Logger &logger)
     if (length != packet_length)
     {
         WarningIncompletePacket_(logger, packet, length);
-        return;
+        return false;
     }
-    else if (!is_valid(packet))
+    else if (!IsValid(packet))
     {
         WarningInvalidPacket_(logger, packet);
-        return;
+        return false;
     }
+
+    return true;
 }
 
 #endif // JIANGTUN_SERIAL_RECIEVE_H_
