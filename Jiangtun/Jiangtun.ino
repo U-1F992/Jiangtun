@@ -4,7 +4,7 @@
 
 #include "nxmc/nxmc.hpp"
 #include "serial/logger.hpp"
-#include "serial/recieve.hpp"
+#include "serial/receive.hpp"
 #include "gc.hpp"
 #include "utils.hpp"
 
@@ -13,7 +13,7 @@ Gamecube_Data_t data = defaultGamecubeData;
 
 SerialLogger logger;
 PacketHandler handler(
-    Recieve,
+    Receive,
     [](Packet &packet, Logger &logger)
     {
         ToReport(packet, data.report);

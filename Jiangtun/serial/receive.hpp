@@ -1,11 +1,11 @@
-#ifndef JIANGTUN_SERIAL_RECIEVE_H_
-#define JIANGTUN_SERIAL_RECIEVE_H_
+#ifndef JIANGTUN_SERIAL_RECEIVE_H_
+#define JIANGTUN_SERIAL_RECEIVE_H_
 
 #include "../nxmc/nxmc.hpp"
 
 inline void WarningIncompletePacket_(Logger &logger, const Packet packet, const size_t length)
 {
-    char message[60] = "Recieve incomplete packet:";
+    char message[60] = "Receive incomplete packet:";
     for (int i = 0; i < length; i++)
     {
         char hex[4];
@@ -19,12 +19,12 @@ inline void WarningInvalidPacket_(Logger &logger, const Packet packet)
 {
     char message[57];
     sprintf(
-        message, "Recieve invalid packet: %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X",
+        message, "Receive invalid packet: %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X",
         packet.raw[0], packet.raw[1], packet.raw[2], packet.raw[3], packet.raw[4], packet.raw[5], packet.raw[6], packet.raw[7], packet.raw[8], packet.raw[9], packet.raw[10]);
     logger.Warning(message);
 }
 
-bool Recieve(Packet &packet, Logger &logger)
+bool Receive(Packet &packet, Logger &logger)
 {
     if (Serial.available() == 0)
     {
@@ -47,4 +47,4 @@ bool Recieve(Packet &packet, Logger &logger)
     return true;
 }
 
-#endif // JIANGTUN_SERIAL_RECIEVE_H_
+#endif // JIANGTUN_SERIAL_RECEIVE_H_

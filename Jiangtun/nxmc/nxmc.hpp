@@ -66,15 +66,15 @@ class PacketHandler
 {
 public:
     PacketHandler(
-        bool (*Recieve)(Packet &packet, Logger &logger),
+        bool (*Receive)(Packet &packet, Logger &logger),
         void (*Filter)(Packet &packet, Logger &logger),
         void (*Send)(const Packet packet, Logger &logger),
-        Logger &logger) : Recieve_(Recieve), Filter_(Filter), Send_(Send), logger_(logger) {}
+        Logger &logger) : Receive_(Receive), Filter_(Filter), Send_(Send), logger_(logger) {}
     void Loop()
     {
         Packet packet;
 
-        if (Recieve_(packet, logger_))
+        if (Receive_(packet, logger_))
         {
             Filter_(packet, logger_);
         }
@@ -82,7 +82,7 @@ public:
     }
 
 private:
-    bool (*Recieve_)(Packet &packet, Logger &logger);
+    bool (*Receive_)(Packet &packet, Logger &logger);
     void (*Filter_)(Packet &packet, Logger &logger);
     void (*Send_)(const Packet packet, Logger &logger);
     Logger &logger_;
