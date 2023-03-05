@@ -4,14 +4,14 @@
 
 constexpr nxmc::RawPacket kValidRawPacket = {0xab, 0, 0, 8, 128, 128, 128, 128, 0, 0, 0};
 
-TEST(DefineLogTest, NeverWriteWhenMinimumIsNone)
+TEST(DefineLogTest, NeverWriteWhenLowestIsNone)
 {
     auto log = nxmc::helper::DefineLog(
-        nxmc::Severity::None,
         [](const std::string &_0)
         {
             FAIL();
-        });
+        },
+        nxmc::Severity::None);
     log(nxmc::Severity::Debug, "");
     log(nxmc::Severity::Info, "");
     log(nxmc::Severity::Warning, "");
@@ -19,10 +19,9 @@ TEST(DefineLogTest, NeverWriteWhenMinimumIsNone)
     log(nxmc::Severity::None, "");
 }
 
-TEST(DefineLogTest, NeverWriteDebugOrInfoWhenMinimumIsWarning)
+TEST(DefineLogTest, NeverWriteDebugOrInfoWhenLowestIsWarning)
 {
     auto log = nxmc::helper::DefineLog(
-        nxmc::Severity::Warning,
         [](const std::string &message)
         {
             if (
@@ -31,7 +30,8 @@ TEST(DefineLogTest, NeverWriteDebugOrInfoWhenMinimumIsWarning)
             {
                 FAIL();
             }
-        });
+        },
+        nxmc::Severity::Warning);
     log(nxmc::Severity::Debug, "");
     log(nxmc::Severity::Info, "");
     log(nxmc::Severity::Warning, "");
@@ -48,7 +48,7 @@ TEST(DefineRetrieveTest, ValidRawPacket)
         return raw;
     };
     auto log = [](nxmc::Severity _0, const std::string &_1) {};
-    
+
     auto must_be_packet = nxmc::helper::DefineRetrieve(read)(log);
     ASSERT_TRUE(must_be_packet.has_value()) << must_be_packet.error();
 
@@ -64,7 +64,7 @@ TEST(DefineRetrieveTest, InvalidRawPacket)
         return nxmc::ExpectRawPacket(nxmc::UnexpectedReason(kReason));
     };
     auto log = [](nxmc::Severity _0, const std::string &_1) {};
-    
+
     auto e = nxmc::helper::DefineRetrieve(read)(log);
     ASSERT_FALSE(e.has_value());
     EXPECT_EQ(e.error(), kReason) << e.error();

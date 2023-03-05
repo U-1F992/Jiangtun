@@ -10,6 +10,7 @@
 namespace nxmc::gamecube
 {
     void Apply(Gamecube_Data_t &data, const Packet &packet);
+    std::string ToJSONString(const Gamecube_Data_t &data);
     inline SendCallback DefineSendData(uint8_t pin)
     {
         auto console = CGamecubeConsole(pin);
@@ -26,11 +27,12 @@ namespace nxmc::gamecube
             if (packet.has_value())
             {
                 Apply(cache, packet.value());
+                log(Severity::Debug, ToJSONString(cache));
             }
 
             if (!console.write(cache))
             {
-                return ExpectVoid(UnexpectedReason("packet is empty"));
+                return ExpectVoid(UnexpectedReason("GameCube doesn't seem to be connected"));
             }
             else
             {

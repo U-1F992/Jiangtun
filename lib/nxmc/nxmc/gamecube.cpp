@@ -95,6 +95,15 @@ namespace nxmc::gamecube
         ApplyHat(data, packet);
         ApplySticks(data, packet);
     }
+    std::string ToJSONString(const Gamecube_Data_t &data)
+    {
+        char buffer[244]; // each %d will be within 3 chars, 0~255
+        snprintf(
+            buffer, sizeof(buffer) / sizeof(char),
+            "{\"a\":%d,\"b\":%d,\"x\":%d,\"y\":%d,\"start\":%d,\"origin\":%d,\"errlatch\":%d,\"errstat\":%d,\"dleft\":%d,\"dright\":%d,\"ddown\":%d,\"dup\":%d,\"z\":%d,\"r\":%d,\"l\":%d,\"high1\":%d,\"xAxis\":%d,\"yAxis\":%d,\"cxAxis\":%d,\"cyAxis\":%d,\"left\":%d,\"right\":%d}",
+            data.report.a, data.report.b, data.report.x, data.report.y, data.report.start, data.report.origin, data.report.errlatch, data.report.errstat, data.report.dleft, data.report.dright, data.report.ddown, data.report.dup, data.report.z, data.report.r, data.report.l, data.report.high1, data.report.xAxis, data.report.yAxis, data.report.cxAxis, data.report.cyAxis, data.report.left, data.report.right);
+        return std::string(buffer);
+    }
 }
 
 #endif

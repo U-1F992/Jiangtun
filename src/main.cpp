@@ -6,7 +6,7 @@
 #include "nxmc/helper.h"
 
 constexpr uint8_t kPin = 5;
-constexpr nxmc::Severity kMinimumToWrite = nxmc::Severity::Debug;
+constexpr nxmc::Severity kLowestToWrite = nxmc::Severity::None;
 constexpr unsigned long kTimeout = 100;
 constexpr unsigned long kBaudRate = 9600;
 
@@ -15,7 +15,7 @@ const auto _ = nxmc::DefineLoop(
         nxmc::arduino::TryReadBytes),
     nxmc::gamecube::DefineSendData(kPin),
     nxmc::helper::DefineLog(
-        kMinimumToWrite, nxmc::arduino::Println));
+        nxmc::arduino::Println, kLowestToWrite));
 
 void setup()
 {

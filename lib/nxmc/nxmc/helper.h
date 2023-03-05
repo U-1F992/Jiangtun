@@ -6,12 +6,12 @@
 namespace nxmc::helper
 {
     inline LogCallback DefineLog(
-        Severity minimum_to_write,
-        const std::function<void(const std::string &)> &write)
+        const std::function<void(const std::string &)> &write,
+        Severity lowest_to_write)
     {
-        return [minimum_to_write, write](Severity severity, const std::string &message)
+        return [lowest_to_write, write](Severity severity, const std::string &message)
         {
-            if (severity < minimum_to_write)
+            if (severity < lowest_to_write)
             {
                 return;
             }
