@@ -1,109 +1,137 @@
-#ifdef ARDUINO
-#include "gamecube.h"
+#include "nxmc/gamecube.h"
 
 namespace nxmc::gamecube
 {
-    inline void ApplyButtons(Gamecube_Data_t &data, const Packet &packet)
+    void ApplyButtons_(const nxmc::Packet &p, Gamecube_Data_t &d)
     {
-        data.report.y = static_cast<uint8_t>(packet.GetY());
-        data.report.b = static_cast<uint8_t>(packet.GetB());
-        data.report.a = static_cast<uint8_t>(packet.GetA());
-        data.report.x = static_cast<uint8_t>(packet.GetX());
-        data.report.l = static_cast<uint8_t>(packet.GetL());
-        data.report.r = static_cast<uint8_t>(packet.GetR());
-        data.report.z = static_cast<uint8_t>(packet.GetZR());
-        data.report.start = static_cast<uint8_t>(packet.GetPlus());
+        d.report.y = static_cast<uint8_t>(p.y);
+        d.report.b = static_cast<uint8_t>(p.b);
+        d.report.a = static_cast<uint8_t>(p.a);
+        d.report.x = static_cast<uint8_t>(p.x);
+        d.report.l = static_cast<uint8_t>(p.l);
+        d.report.r = static_cast<uint8_t>(p.r);
+        d.report.z = static_cast<uint8_t>(p.zr);
+        d.report.start = static_cast<uint8_t>(p.plus);
     }
-    inline void ApplyHat(Gamecube_Data_t &data, const Packet &packet)
+    void ApplyHat_(const nxmc::Packet &p, Gamecube_Data_t &d)
     {
-        switch (packet.GetHat())
+        switch (p.hat)
         {
         case Hat::Up:
-            data.report.dup = 1;
-            data.report.dright = 0;
-            data.report.ddown = 0;
-            data.report.dleft = 0;
+            d.report.dup = 1;
+            d.report.dright = 0;
+            d.report.ddown = 0;
+            d.report.dleft = 0;
             break;
 
         case Hat::UpRight:
-            data.report.dup = 1;
-            data.report.dright = 1;
-            data.report.ddown = 0;
-            data.report.dleft = 0;
+            d.report.dup = 1;
+            d.report.dright = 1;
+            d.report.ddown = 0;
+            d.report.dleft = 0;
             break;
 
         case Hat::Right:
-            data.report.dup = 0;
-            data.report.dright = 1;
-            data.report.ddown = 0;
-            data.report.dleft = 0;
+            d.report.dup = 0;
+            d.report.dright = 1;
+            d.report.ddown = 0;
+            d.report.dleft = 0;
             break;
 
         case Hat::DownRight:
-            data.report.dup = 0;
-            data.report.dright = 1;
-            data.report.ddown = 1;
-            data.report.dleft = 0;
+            d.report.dup = 0;
+            d.report.dright = 1;
+            d.report.ddown = 1;
+            d.report.dleft = 0;
             break;
 
         case Hat::Down:
-            data.report.dup = 0;
-            data.report.dright = 0;
-            data.report.ddown = 1;
-            data.report.dleft = 0;
+            d.report.dup = 0;
+            d.report.dright = 0;
+            d.report.ddown = 1;
+            d.report.dleft = 0;
             break;
 
         case Hat::DownLeft:
-            data.report.dup = 0;
-            data.report.dright = 0;
-            data.report.ddown = 1;
-            data.report.dleft = 1;
+            d.report.dup = 0;
+            d.report.dright = 0;
+            d.report.ddown = 1;
+            d.report.dleft = 1;
             break;
 
         case Hat::Left:
-            data.report.dup = 0;
-            data.report.dright = 0;
-            data.report.ddown = 0;
-            data.report.dleft = 1;
+            d.report.dup = 0;
+            d.report.dright = 0;
+            d.report.ddown = 0;
+            d.report.dleft = 1;
             break;
 
         case Hat::UpLeft:
-            data.report.dup = 1;
-            data.report.dright = 0;
-            data.report.ddown = 0;
-            data.report.dleft = 1;
+            d.report.dup = 1;
+            d.report.dright = 0;
+            d.report.ddown = 0;
+            d.report.dleft = 1;
             break;
 
         case Hat::Neutral:
-            data.report.dup = 0;
-            data.report.dright = 0;
-            data.report.ddown = 0;
-            data.report.dleft = 0;
+            d.report.dup = 0;
+            d.report.dright = 0;
+            d.report.ddown = 0;
+            d.report.dleft = 0;
             break;
         }
     }
-    inline void ApplySticks(Gamecube_Data_t &data, const Packet &packet)
+    void ApplySticks_(const nxmc::Packet &p, Gamecube_Data_t &d)
     {
-        data.report.xAxis = packet.GetLX();
-        data.report.yAxis = 0xFF - packet.GetLY();
-        data.report.cxAxis = packet.GetRX();
-        data.report.cyAxis = 0xFF - packet.GetRY();
+        d.report.xAxis = p.lx;
+        d.report.yAxis = 0xFF - p.ly;
+        d.report.cxAxis = p.rx;
+        d.report.cyAxis = 0xFF - p.ry;
     }
-    void Apply(Gamecube_Data_t &data, const Packet &packet)
+    void Apply_(const nxmc::Packet &p, Gamecube_Data_t &d)
     {
-        ApplyButtons(data, packet);
-        ApplyHat(data, packet);
-        ApplySticks(data, packet);
+        ApplyButtons_(p, d);
+        ApplyHat_(p, d);
+        ApplySticks_(p, d);
     }
-    std::string ToJSONString(const Gamecube_Data_t &data)
+    std::function<etl::expected<void, std::string>(const etl::expected<nxmc::Packet, std::string> &)> PacketSender(
+        const uint8_t pin, const std::function<void()> &Reset = []() {})
     {
-        char buffer[244]; // each %d will be within 3 chars, 0~255
-        snprintf(
-            buffer, sizeof(buffer) / sizeof(char),
-            "{\"a\":%d,\"b\":%d,\"x\":%d,\"y\":%d,\"start\":%d,\"origin\":%d,\"errlatch\":%d,\"errstat\":%d,\"dleft\":%d,\"dright\":%d,\"ddown\":%d,\"dup\":%d,\"z\":%d,\"r\":%d,\"l\":%d,\"high1\":%d,\"xAxis\":%d,\"yAxis\":%d,\"cxAxis\":%d,\"cyAxis\":%d,\"left\":%d,\"right\":%d}",
-            data.report.a, data.report.b, data.report.x, data.report.y, data.report.start, data.report.origin, data.report.errlatch, data.report.errstat, data.report.dleft, data.report.dright, data.report.ddown, data.report.dup, data.report.z, data.report.r, data.report.l, data.report.high1, data.report.xAxis, data.report.yAxis, data.report.cxAxis, data.report.cyAxis, data.report.left, data.report.right);
-        return std::string(buffer);
+        auto console = CGamecubeConsole(pin);
+        auto cache = defaultGamecubeData;
+
+        // Omajinai to recognize the controller
+        cache.report.start = 1;
+        console.write(cache);
+        cache.report.start = 0;
+        console.write(cache);
+
+        bool latch = false;
+
+        return [Reset, console, cache, latch](const etl::expected<nxmc::Packet, std::string> &p) mutable
+        {
+            typedef etl::expected<void, std::string> _;
+
+            if (p.has_value())
+            {
+                Apply_(p.value(), cache);
+                if (p.value().home == Button::Pressed && !latch)
+                {
+                    // Once Reset is fired, it should not be possible to Reset again until home is released.
+                    Reset();
+                    latch = true;
+                }
+                else if (p.value().home == Button::Released)
+                {
+                    latch = false;
+                }
+            }
+
+            if (!console.write(cache))
+            {
+                return _(etl::unexpected<std::string>("GameCube doesn't seem to be connected"));
+            }
+            return _();
+        };
     }
 }
-
-#endif

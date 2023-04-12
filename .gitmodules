@@ -1,3 +1,7 @@
 [submodule "lib/joybus-pio"]
 	path = lib/joybus-pio
 	url = https://github.com/mizuyoukanao/joybus-pio.git
+[submodule "lib/plog"]
+	path = lib/plog
+	url = https://github.com/u1F992/plog.git
+	branch = feature/platformio-support
