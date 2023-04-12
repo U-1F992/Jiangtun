@@ -1,3 +1,5 @@
+#include "plog/Log.h"
+
 #include "nxmc/gamecube.h"
 
 namespace nxmc::gamecube
@@ -94,6 +96,15 @@ namespace nxmc::gamecube
         ApplyHat_(p, d);
         ApplySticks_(p, d);
     }
+    std::string ToString_(const Gamecube_Data_t &d)
+    {
+        char buf[170];
+        snprintf(
+            buf, 170,
+            "{ a:%d b:%d x:%d y:%d start:%d origin:%d errlatch:%d errstat:%d dleft:%d dright:%d ddown:%d dup:%d z:%d r:%d l:%d high1:%d xAxis:%d yAxis:%d cxAxis:%d cyAxis:%d left:%d right:%d }",
+            d.report.a, d.report.b, d.report.x, d.report.y, d.report.start, d.report.origin, d.report.errlatch, d.report.errstat, d.report.dleft, d.report.dright, d.report.ddown, d.report.dup, d.report.z, d.report.r, d.report.l, d.report.high1, d.report.xAxis, d.report.yAxis, d.report.cxAxis, d.report.cyAxis, d.report.left, d.report.right);
+        return std::string(buf);
+    }
     std::function<etl::expected<void, std::string>(const etl::expected<nxmc::Packet, std::string> &)> PacketSender(
         const uint8_t pin, const std::function<void()> &Reset = []() {})
     {
@@ -115,21 +126,27 @@ namespace nxmc::gamecube
             if (p.has_value())
             {
                 Apply_(p.value(), cache);
-                if (p.value().home == Button::Pressed && !latch)
-                {
-                    // Once Reset is fired, it should not be possible to Reset again until home is released.
-                    Reset();
-                    latch = true;
-                }
-                else if (p.value().home == Button::Released)
-                {
-                    latch = false;
-                }
+                PLOGD << ToString_(cache);
             }
 
             if (!console.write(cache))
             {
                 return _(etl::unexpected<std::string>("GameCube doesn't seem to be connected"));
+            }
+            if (!p.has_value())
+            {
+                return _();
+            }
+
+            if (p.value().home == Button::Pressed && !latch)
+            {
+                // Once Reset is fired, it should not be possible to Reset again until home is released.
+                Reset();
+                latch = true;
+            }
+            else if (p.value().home == Button::Released)
+            {
+                latch = false;
             }
             return _();
         };

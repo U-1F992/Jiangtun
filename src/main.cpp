@@ -51,10 +51,6 @@ void loop()
     {
         PLOGW << received.error();
     }
-    else
-    {
-        PLOGD << nxmc::ToString(received.value());
-    }
 
     auto sent = TrySend(received);
     if (!sent.has_value())

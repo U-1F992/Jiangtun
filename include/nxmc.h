@@ -63,7 +63,6 @@ namespace nxmc
         };
     } Packet;
 
-    std::string ToString(const Packet &);
     std::function<etl::expected<nxmc::Packet, std::string>()> PacketReceiver(const std::function<etl::expected<uint8_t, std::string>()> &);
 }
 

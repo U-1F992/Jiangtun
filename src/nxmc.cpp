@@ -1,6 +1,8 @@
 #include <cstdio>
 #include <cstring>
 
+#include "plog/Log.h"
+
 #include "nxmc.h"
 
 namespace nxmc
@@ -67,7 +69,7 @@ namespace nxmc
         }
     }
 
-    std::string ToString(const Packet &p)
+    std::string ToString_(const Packet &p)
     {
         char buf[135];
         snprintf(
@@ -170,6 +172,7 @@ namespace nxmc
             Packet p;
             memcpy(p.raw, buf, 11);
             pos = 0;
+            PLOGD << ToString_(p);
             return _(p);
         };
     }
