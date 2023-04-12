@@ -63,6 +63,8 @@ namespace nxmc
         };
     } Packet;
 
+    constexpr uint8_t kHeader = 0xAB;
+
     std::function<etl::expected<nxmc::Packet, std::string>()> PacketReceiver(const std::function<etl::expected<uint8_t, std::string>()> &);
 }
 

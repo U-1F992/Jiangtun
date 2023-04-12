@@ -1,3 +1,4 @@
+#ifdef ARDUINO
 #ifndef NXMC_GAMECUBE_H_
 #define NXMC_GAMECUBE_H_
 
@@ -11,3 +12,4 @@ namespace nxmc::gamecube
 }
 
 #endif // NXMC_GAMECUBE_H_
+#endif

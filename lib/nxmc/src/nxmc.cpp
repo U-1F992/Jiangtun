@@ -114,7 +114,6 @@ namespace nxmc
         return etl::unexpected<std::string>(std::string(msg));
     }
 
-    constexpr uint8_t kHeader = 0xAB;
     constexpr int kTimeout = 100;
 
     std::function<etl::expected<nxmc::Packet, std::string>()> PacketReceiver(const std::function<etl::expected<uint8_t, std::string>()> &Read)

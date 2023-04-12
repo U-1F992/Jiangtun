@@ -1,3 +1,4 @@
+#ifdef ARDUINO
 #include "plog/Log.h"
 
 #include "nxmc/gamecube.h"
@@ -154,3 +155,4 @@ namespace nxmc::gamecube
         };
     }
 }
+#endif
