@@ -49,12 +49,16 @@ void loop()
     auto received = TryReceive();
     if (!received.has_value())
     {
-        PLOGD << received.error();
+        PLOGW << received.error();
+    }
+    else
+    {
+        PLOGD << nxmc::ToString(received.value());
     }
 
     auto sent = TrySend(received);
     if (!sent.has_value())
     {
-        PLOGD << sent.error();
+        PLOGW << sent.error();
     }
 }
