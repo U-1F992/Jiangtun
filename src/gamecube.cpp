@@ -105,8 +105,7 @@ namespace nxmc::gamecube
             d.report.a, d.report.b, d.report.x, d.report.y, d.report.start, d.report.origin, d.report.errlatch, d.report.errstat, d.report.dleft, d.report.dright, d.report.ddown, d.report.dup, d.report.z, d.report.r, d.report.l, d.report.high1, d.report.xAxis, d.report.yAxis, d.report.cxAxis, d.report.cyAxis, d.report.left, d.report.right);
         return std::string(buf);
     }
-    std::function<etl::expected<void, std::string>(const etl::expected<nxmc::Packet, std::string> &)> PacketSender(
-        const uint8_t pin, const std::function<void()> &Reset = []() {})
+    std::function<etl::expected<void, std::string>(const etl::expected<nxmc::Packet, std::string> &)> PacketSender(const uint8_t pin, const std::function<void(CGamecubeConsole &, Gamecube_Data_t &)> &PressReset, const std::function<void(CGamecubeConsole &, Gamecube_Data_t &)> &ReleaseReset)
     {
         auto console = CGamecubeConsole(pin);
         auto cache = defaultGamecubeData;
@@ -119,7 +118,7 @@ namespace nxmc::gamecube
 
         bool latch = false;
 
-        return [Reset, console, cache, latch](const etl::expected<nxmc::Packet, std::string> &p) mutable
+        return [PressReset, ReleaseReset, console, cache, latch](const etl::expected<nxmc::Packet, std::string> &p) mutable
         {
             typedef etl::expected<void, std::string> _;
 
@@ -141,11 +140,14 @@ namespace nxmc::gamecube
             if (p.value().home == Button::Pressed && !latch)
             {
                 // Once Reset is fired, it should not be possible to Reset again until home is released.
-                Reset();
+                PLOGD << "press reset";
+                PressReset(console, cache);
                 latch = true;
             }
             else if (p.value().home == Button::Released)
             {
+                PLOGD << "release reset";
+                ReleaseReset(console, cache);
                 latch = false;
             }
             return _();

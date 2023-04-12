@@ -7,7 +7,7 @@
 
 namespace nxmc::gamecube
 {
-    std::function<etl::expected<void, std::string>(const etl::expected<nxmc::Packet, std::string> &)> PacketSender(const uint8_t, const std::function<void()> &);
+    std::function<etl::expected<void, std::string>(const etl::expected<nxmc::Packet, std::string> &)> PacketSender(const uint8_t, const std::function<void(CGamecubeConsole &, Gamecube_Data_t &)> &, const std::function<void(CGamecubeConsole &, Gamecube_Data_t &)> &);
 }
 
 #endif // NXMC_GAMECUBE_H_

@@ -39,9 +39,21 @@ auto TryReceive = nxmc::PacketReceiver(
 
 auto TrySend = nxmc::gamecube::PacketSender(
     kPin,
-    []()
+    [](CGamecubeConsole &console, Gamecube_Data_t &d)
     {
-        // Use servo, etc.
+        d.report.b = 1;
+        d.report.x = 1;
+        d.report.start = 1;
+        console.write(d);
+        
+        // Or use servo, etc.
+    },
+    [](CGamecubeConsole &console, Gamecube_Data_t &d)
+    {
+        d.report.b = 0;
+        d.report.x = 0;
+        d.report.start = 0;
+        console.write(d);
     });
 
 void loop()
