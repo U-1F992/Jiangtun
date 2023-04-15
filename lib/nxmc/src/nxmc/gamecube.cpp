@@ -145,7 +145,7 @@ namespace nxmc::gamecube
                 PressReset(console, cache);
                 latch = true;
             }
-            else if (p.value().home == Button::Released)
+            else if (p.value().home == Button::Released && latch)
             {
                 PLOGD << "release reset";
                 ReleaseReset(console, cache);

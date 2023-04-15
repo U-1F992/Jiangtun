@@ -15,7 +15,7 @@ static plog::ArduinoAppender<plog::TxtFormatter> arduino_appender(Serial);
 
 void setup()
 {
-    plog::init(plog::verbose, &arduino_appender);
+    plog::init(plog::warning, &arduino_appender);
     Serial.begin(kBaudRate);
 }
 
@@ -23,6 +23,7 @@ auto TryReceive = nxmc::PacketReceiver(
     []()
     {
         typedef etl::expected<uint8_t, std::string> _;
+        
         if (Serial.available() == 0)
         {
             return _(etl::unexpected<std::string>("Serial not available"));
@@ -59,10 +60,10 @@ auto TrySend = nxmc::gamecube::PacketSender(
 void loop()
 {
     auto received = TryReceive();
-    if (!received.has_value())
-    {
-        PLOGW << received.error();
-    }
+    // if (!received.has_value())
+    // {
+    //     PLOGW << received.error();
+    // }
 
     auto sent = TrySend(received);
     if (!sent.has_value())

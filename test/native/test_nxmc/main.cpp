@@ -25,14 +25,20 @@ std::function<etl::expected<uint8_t, std::string>()> TestInput(const std::vector
     };
 }
 
-TEST(PacketReceiverTest, ValidBytes)
+etl::expected<nxmc::Packet, std::string> GetPacket(std::vector<etl::expected<uint8_t, std::string>> input)
 {
-    auto TryReceive = nxmc::PacketReceiver(TestInput({ 0xAB, 0b11111111, 0b00111111, 8, 128, 128, 128, 128, 255, 255, 255 }));
+    auto TryReceive = nxmc::PacketReceiver(TestInput(input));
     etl::expected<nxmc::Packet, std::string> expected;
-    for (int i = 0; i < 11; i++)
+    for (int i = 0; i < input.size(); i++)
     {
         expected = TryReceive();
     }
+    return expected;
+}
+
+TEST(PacketReceiverTest, ValidBytes)
+{
+    auto expected = GetPacket({ 0xAB, 0b11111111, 0b00111111, 8, 128, 128, 128, 128, 255, 255, 255 });
     ASSERT_TRUE(expected.has_value()) << expected.error();
 
     auto packet = expected.value();
@@ -64,55 +70,29 @@ TEST(PacketReceiverTest, ValidBytes)
 TEST(PacketReceiverTest, PassThrough)
 {
     const std::string kTest = "test";
-    auto TryReceive = nxmc::PacketReceiver(TestInput({ etl::expected<uint8_t, std::string>(etl::unexpected<std::string>(kTest)) }));
-    auto expected = TryReceive();
+    auto expected = GetPacket({ etl::expected<uint8_t, std::string>(etl::unexpected<std::string>(kTest)) });
     ASSERT_FALSE(expected.has_value());
     EXPECT_EQ(expected.error(), kTest);
 }
 
 TEST(PacketReceiverTest, HeaderInvalid)
 {
-    auto TryReceive_0 = nxmc::PacketReceiver(TestInput({ 0xAB, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }));
-    etl::expected<nxmc::Packet, std::string> e_0;
-    for (int i = 0; i < 11; i++)
-    {
-        e_0 = TryReceive_0();
-    }
+    auto e_0 = GetPacket({ 0xAB, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 });
     ASSERT_TRUE(e_0.has_value()) << e_0.error();
 
-    auto TryReceive_1 = nxmc::PacketReceiver(TestInput({ 0xFF, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }));
-    etl::expected<nxmc::Packet, std::string> e_1;
-    for (int i = 0; i < 11; i++)
-    {
-        e_1 = TryReceive_1();
-    }
+    auto e_1 = GetPacket({ 0xFF }); 
     ASSERT_FALSE(e_1.has_value());
 }
 
 TEST(PacketReceiverTest, ButtonsOutOfRange)
 {
-    auto TryReceive_0 = nxmc::PacketReceiver(TestInput({ 0xAB, 0, 0b00111111, 0, 0, 0, 0, 0, 0, 0, 0 }));
-    etl::expected<nxmc::Packet, std::string> e_0;
-    for (int i = 0; i < 11; i++)
-    {
-        e_0 = TryReceive_0();
-    }
+    auto e_0 = GetPacket({ 0xAB, 0, 0b00111111, 0, 0, 0, 0, 0, 0, 0, 0 });
     ASSERT_TRUE(e_0.has_value()) << e_0.error();
 
-    auto TryReceive_1 = nxmc::PacketReceiver(TestInput({ 0xAB, 0, 0b01000000, 0, 0, 0, 0, 0, 0, 0, 0 }));
-    etl::expected<nxmc::Packet, std::string> e_1;
-    for (int i = 0; i < 11; i++)
-    {
-        e_1 = TryReceive_1();
-    }
+    auto e_1 = GetPacket({ 0xAB, 0, 0b01000000 });
     ASSERT_FALSE(e_1.has_value());
 
-    auto TryReceive_2 = nxmc::PacketReceiver(TestInput({ 0xAB, 0, 0b11000000, 0, 0, 0, 0, 0, 0, 0, 0 }));
-    etl::expected<nxmc::Packet, std::string> e_2;
-    for (int i = 0; i < 11; i++)
-    {
-        e_2 = TryReceive_2();
-    }
+    auto e_2 = GetPacket({ 0xAB, 0, 0b11000000 });
     ASSERT_FALSE(e_2.has_value());
 }
 
