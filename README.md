@@ -18,47 +18,24 @@ NX Macro Controller をゲームキューブ自動化に利用するための Ra
 |          +          |  Start   |
 |       L Click       |  (none)  |
 |       R Click       |  (none)  |
-|        Home         |  (none)  |
+|        Home         | (Reset)  |
 |       Capture       |  (none)  |
 
-## ビルドするまでのいろいろ
+## Build
 
-### SDK
+### Arduino-pico
 
-PlatformIOでもRasberry Pi Pico用ツールチェーンを提供しているが、Arduinoフレームワークとjoybus-pioが要求する`pico/stdio.h`を併用するために、Arduino-PicoをPlatformIOで使用したい。 \[[詳細](https://arduino-pico.readthedocs.io/en/latest/platformio.html)\] 名称が競合するので、公式のツールチェーンはアンインストールしておいた方がいいかも。
-
-```ini
-[env:pico]
-platform = https://github.com/maxgerhardt/platform-raspberrypi.git
-board = pico
-framework = arduino
-board_build.core = earlephilhower
-```
-
-ビルド時にgit cloneが走るが、Windowsの場合はGit for Windowsのパス文字数制限に注意。
+Git for Windowsのパス文字数制限に注意すること。\[[詳細](https://arduino-pico.readthedocs.io/en/latest/platformio.html)\]
 
 ```
 git config --system core.longpaths true
 ```
 
+### plog
+
+現状`.pio/libdeps/pico/plog/samples`ディレクトリを削除しないとビルドが通らない。\[[Pull request](https://github.com/SergiusTheBest/plog/pull/244)\]
+
 ### GoogleTest
-
-`test/native/test_xxx`ディレクトリを作成して、`platformio.ini`を編集する。 \[[公式サンプル](https://github.com/platformio/platformio-examples/tree/develop/unit-testing/googletest/test)\]
-
-```ini
-[env:native]
-platform = native
-test_framework = googletest
-lib_deps = etlcpp/Embedded Template Library@^20.35.12
-
-[env:pico]
-platform = https://github.com/maxgerhardt/platform-raspberrypi.git
-board = pico
-framework = arduino
-board_build.core = earlephilhower
-lib_deps = etlcpp/Embedded Template Library@^20.35.12
-test_ignore = native/*
-```
 
 `platform = native`のビルドツールチェーンは自動ではインストールされない。 \[[参考](https://docs.platformio.org/en/latest/platforms/native.html)\] Windowsの場合はMSYS2にg++を用意してパスを通してねって書いてある。
 
