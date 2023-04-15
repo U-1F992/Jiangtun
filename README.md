@@ -1,6 +1,6 @@
 # Jiangtun（江豚）
 
-NX Macro Controller をゲームキューブ自動化に利用するための Arduino Uno／Raspberry Pi Pico 用ファームウェア
+NX Macro Controller をゲームキューブ自動化に利用するための Raspberry Pi Pico 用ファームウェア
 
 ## Keys
 
@@ -18,14 +18,26 @@ NX Macro Controller をゲームキューブ自動化に利用するための Ar
 |          +          |  Start   |
 |       L Click       |  (none)  |
 |       R Click       |  (none)  |
-|        Home         |  (none)  |
+|        Home         | (Reset)  |
 |       Capture       |  (none)  |
 
 ## Build
 
-[Nintendo by NicoHood](https://github.com/NicoHood/Nintendo)ライブラリが必要です。
+### Arduino-pico
 
-Raspberry Pi Pico 用は、`src`以下を[joybus-pio](https://github.com/mizuyoukanao/joybus-pio)のもので上書きするとビルドが通ります。
+Git for Windowsのパス文字数制限に注意すること。\[[詳細](https://arduino-pico.readthedocs.io/en/latest/platformio.html)\]
+
+```
+git config --system core.longpaths true
+```
+
+### plog
+
+現状`.pio/libdeps/pico/plog/samples`ディレクトリを削除しないとビルドが通らない。\[[Pull request](https://github.com/SergiusTheBest/plog/pull/244)\]
+
+### GoogleTest
+
+`platform = native`のビルドツールチェーンは自動ではインストールされない。 \[[参考](https://docs.platformio.org/en/latest/platforms/native.html)\] Windowsの場合はMSYS2にg++を用意してパスを通してねって書いてある。
 
 ## Reference
 
