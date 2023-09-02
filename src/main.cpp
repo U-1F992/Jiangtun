@@ -1,73 +1,192 @@
 #include <Arduino.h>
+#include <Servo.h>
 
-#include "plog/Appenders/ArduinoAppender.h"
-#include "plog/Init.h"
-#include "plog/Log.h"
-#include "plog/Formatters/TxtFormatter.h"
+#include "Bluewhale.h"
+#include "nxmc2_contrib.h"
 
-#include "nxmc.h"
-#include "nxmc/gamecube.h"
+static CGamecubeConsole console(5);
+static Servo servo;
+static const int PIN_SERVO = 6;
+static Gamecube_Data_t d = defaultGamecubeData;
 
-constexpr uint8_t kPin = 5;
-constexpr unsigned long kBaudRate = 9600;
+static const int SERIAL_INACTIVE_TIMEOUT = 100;
+static int inactive_count = 0;
 
-static plog::ArduinoAppender<plog::TxtFormatter> arduino_appender(Serial);
+static NXMC2CommandBuilder builder;
+static NXMC2Command command;
+static NXMC2CommandHandler handler;
+
+static NXMC2CommandButtonState reset_state_ = NXMC2_COMMAND_BUTTON_STATE_RELEASED;
 
 void setup()
 {
-    plog::init(plog::warning, &arduino_appender);
-    Serial.begin(kBaudRate);
+    Serial.begin(9600);
+
+    // Setup for SG90
+    servo.attach(PIN_SERVO, 500, 2400);
+
+    d.report.a = 0;
+    d.report.b = 0;
+    d.report.x = 0;
+    d.report.y = 0;
+    d.report.start = 0;
+    d.report.dleft = 0;
+    d.report.dright = 0;
+    d.report.ddown = 0;
+    d.report.dup = 0;
+    d.report.z = 0;
+    d.report.r = 0;
+    d.report.l = 0;
+    d.report.xAxis = 128;
+    d.report.yAxis = 128;
+    d.report.cxAxis = 128;
+    d.report.cyAxis = 128;
+    d.report.left = 0;
+    d.report.right = 0;
+
+    // Omajinai to recognize the controller
+    d.report.start = 1;
+    console.write(d);
+    d.report.start = 0;
+    console.write(d);
+
+    nxmc2_command_builder_initialize(&builder);
+    nxmc2_command_handler_initialize(&handler);
+    handler.y = [](NXMC2CommandButtonState state)
+    { d.report.y = (uint8_t)state; };
+    handler.b = [](NXMC2CommandButtonState state)
+    { d.report.b = (uint8_t)state; };
+    handler.a = [](NXMC2CommandButtonState state)
+    { d.report.a = (uint8_t)state; };
+    handler.x = [](NXMC2CommandButtonState state)
+    { d.report.x = (uint8_t)state; };
+    handler.l = [](NXMC2CommandButtonState state)
+    { d.report.l = (uint8_t)state; };
+    handler.r = [](NXMC2CommandButtonState state)
+    { d.report.r = (uint8_t)state; };
+    handler.zr = [](NXMC2CommandButtonState state)
+    { d.report.z = (uint8_t)state; };
+    handler.plus = [](NXMC2CommandButtonState state)
+    { d.report.start = (uint8_t)state; };
+    handler.home = [](NXMC2CommandButtonState state)
+    {
+        if (reset_state_ == state)
+        {
+            return;
+        }
+
+        servo.write(state == NXMC2_COMMAND_BUTTON_STATE_PRESSED ? 65 : 90);
+        reset_state_ = state;
+    };
+    handler.hat = [](NXMC2CommandHatState state)
+    {
+        switch (state)
+        {
+        case NXMC2_COMMAND_HAT_STATE_UP:
+            d.report.dup = 1;
+            d.report.dright = 0;
+            d.report.ddown = 0;
+            d.report.dleft = 0;
+            break;
+        case NXMC2_COMMAND_HAT_STATE_UPRIGHT:
+            d.report.dup = 1;
+            d.report.dright = 1;
+            d.report.ddown = 0;
+            d.report.dleft = 0;
+            break;
+        case NXMC2_COMMAND_HAT_STATE_RIGHT:
+            d.report.dup = 0;
+            d.report.dright = 1;
+            d.report.ddown = 0;
+            d.report.dleft = 0;
+            break;
+        case NXMC2_COMMAND_HAT_STATE_DOWNRIGHT:
+            d.report.dup = 0;
+            d.report.dright = 1;
+            d.report.ddown = 1;
+            d.report.dleft = 0;
+            break;
+        case NXMC2_COMMAND_HAT_STATE_DOWN:
+            d.report.dup = 0;
+            d.report.dright = 0;
+            d.report.ddown = 1;
+            d.report.dleft = 0;
+            break;
+        case NXMC2_COMMAND_HAT_STATE_DOWNLEFT:
+            d.report.dup = 0;
+            d.report.dright = 0;
+            d.report.ddown = 1;
+            d.report.dleft = 1;
+            break;
+        case NXMC2_COMMAND_HAT_STATE_LEFT:
+            d.report.dup = 0;
+            d.report.dright = 0;
+            d.report.ddown = 0;
+            d.report.dleft = 1;
+            break;
+        case NXMC2_COMMAND_HAT_STATE_UPLEFT:
+            d.report.dup = 1;
+            d.report.dright = 0;
+            d.report.ddown = 0;
+            d.report.dleft = 1;
+            break;
+        case NXMC2_COMMAND_HAT_STATE_NEUTRAL:
+        default:
+            d.report.dup = 0;
+            d.report.dright = 0;
+            d.report.ddown = 0;
+            d.report.dleft = 0;
+            break;
+        }
+    };
+    handler.l_stick = [](uint8_t x, uint8_t y)
+    {
+        d.report.xAxis = x;
+        d.report.yAxis = 0xFF - y;
+    };
+    handler.r_stick = [](uint8_t x, uint8_t y)
+    {
+        d.report.cxAxis = x;
+        d.report.cyAxis = 0xFF - y;
+    };
 }
 
-auto TryReceive = nxmc::PacketReceiver(
-    []()
+void static update_data()
+{
+    if (Serial.available() == 0)
     {
-        typedef etl::expected<uint8_t, std::string> _;
-        
-        if (Serial.available() == 0)
+        inactive_count++;
+        if (SERIAL_INACTIVE_TIMEOUT < inactive_count)
         {
-            return _(etl::unexpected<std::string>("Serial not available"));
+            inactive_count = 0;
+            nxmc2_command_builder_flush(&builder);
         }
+        return;
+    }
+    inactive_count = 0;
 
-        auto ret = Serial.read();
-        if (ret == -1)
-        {
-            return _(etl::unexpected<std::string>("got -1 from Serial.read()"));
-        }
-
-        return _(static_cast<uint8_t>(ret));
-    });
-
-auto TrySend = nxmc::gamecube::PacketSender(
-    kPin,
-    [](CGamecubeConsole &console, Gamecube_Data_t &d)
+    NXMC2Result ret = nxmc2_command_builder_append(&builder, Serial.read());
+    if (ret != NXMC2_RESULT_OK)
     {
-        d.report.b = 1;
-        d.report.x = 1;
-        d.report.start = 1;
-        console.write(d);
-        
-        // Or use servo, etc.
-    },
-    [](CGamecubeConsole &console, Gamecube_Data_t &d)
+        nxmc2_command_builder_flush(&builder);
+        return;
+    }
+
+    ret = nxmc2_command_builder_build(&builder, &command);
+    if (ret != NXMC2_RESULT_OK)
     {
-        d.report.b = 0;
-        d.report.x = 0;
-        d.report.start = 0;
-        console.write(d);
-    });
+        return;
+    }
+    nxmc2_command_execute(&command, &handler);
+
+    nxmc2_command_builder_flush(&builder);
+}
 
 void loop()
 {
-    auto received = TryReceive();
-    // if (!received.has_value())
-    // {
-    //     PLOGW << received.error();
-    // }
-
-    auto sent = TrySend(received);
-    if (!sent.has_value())
+    update_data();
+    if (!console.write(d))
     {
-        PLOGW << sent.error();
+        Serial.println("GCが起動していないか、接続されていません。");
     }
 }

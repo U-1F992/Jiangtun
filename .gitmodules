@@ -1,0 +1,6 @@
+[submodule "lib/nxmc2_contrib"]
+	path = lib/nxmc2_contrib
+	url = https://github.com/u1F992/nxmc2_contrib.git
+[submodule "lib/Bluewhale"]
+	path = lib/Bluewhale
+	url = https://github.com/mizuyoukanao/Bluewhale.git
