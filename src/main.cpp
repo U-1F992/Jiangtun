@@ -142,12 +142,18 @@ void setup()
     handler.l_stick = [](uint8_t x, uint8_t y)
     {
         d.report.xAxis = x;
-        d.report.yAxis = 0xFF - y;
+
+        // There are a few games that do not handle yAxis=0 correctly.
+        uint8_t y_axis = 0xFF - y;
+        d.report.yAxis = y_axis == 0 ? 1 : y_axis;
     };
     handler.r_stick = [](uint8_t x, uint8_t y)
     {
         d.report.cxAxis = x;
-        d.report.cyAxis = 0xFF - y;
+
+        // There are a few games that do not handle cyAxis=0 correctly.
+        uint8_t cy_axis = 0xFF - y;
+        d.report.cyAxis = cy_axis == 0 ? 1 : cy_axis;
     };
 }
 
