@@ -1,29 +1,222 @@
 #include <Arduino.h>
 #include <Servo.h>
 
+#include "pico/stdlib.h"
+#include "pico/mutex.h"
+#include "hardware/timer.h"
+
 #include "Bluewhale.h"
-#include "nxmc2_contrib.h"
+
+#include "nxamf.h"
+#include "nxamf/nxmc2.h"
+#include "nxamf/pokecon.h"
+
+static const int SERIAL_INACTIVE_TIMEOUT = 100;
+static int inactive_count = 0;
 
 static CGamecubeConsole console(5);
 static Servo servo;
 static const int PIN_SERVO = 6;
 static Gamecube_Data_t d = defaultGamecubeData;
+static mutex_t d_mutex;
 
-static const int SERIAL_INACTIVE_TIMEOUT = 100;
-static int inactive_count = 0;
+static Nxmc2Protocol *nxmc2_protocol;
+static NxamfBytesBuffer *nxmc2;
 
-static Nxmc2CommandBuilder builder;
-static Nxmc2Command command;
-static Nxmc2CommandHandler handler;
+static PokeConProtocol *pokecon_protocol;
+static NxamfBytesBuffer *pokecon;
 
-static Nxmc2CommandButtonState reset_state_ = NXMC2_COMMAND_BUTTON_STATE_RELEASED;
+static NxamfButtonState reset_state = NXAMF_BUTTON_STATE_RELEASED;
+
+static int64_t led_off(alarm_id_t id, void *user_data)
+{
+    digitalWrite(LED_BUILTIN, LOW);
+    return false;
+}
+
+static void async_led_on_for_100ms()
+{
+    digitalWriteFast(LED_BUILTIN, HIGH);
+    alarm_id_t alarm_id = add_alarm_in_ms(100, led_off, NULL, false);
+}
+
+static NxamfGamepadState *append_both(uint8_t packet)
+{
+    NxamfGamepadState *n = nxamf_bytes_buffer_append(nxmc2, packet);
+    if (n != NULL)
+    {
+        return n;
+    }
+
+    NxamfGamepadState *p = nxamf_bytes_buffer_append(pokecon, packet);
+    return p;
+}
+
+static void clear_both()
+{
+    nxamf_bytes_buffer_clear(nxmc2);
+    nxamf_bytes_buffer_clear(pokecon);
+}
+
+static void reflect_state(NxamfGamepadState *state)
+{
+    if (state == NULL)
+    {
+        return;
+    }
+
+    async_led_on_for_100ms();
+
+    mutex_enter_blocking(&d_mutex);
+
+    d.report.y = (uint8_t)state->y;
+    d.report.b = (uint8_t)state->b;
+    d.report.a = (uint8_t)state->a;
+    d.report.x = (uint8_t)state->x;
+    d.report.l = (uint8_t)state->l;
+    d.report.r = (uint8_t)state->r;
+    d.report.z = (uint8_t)state->zr;
+    d.report.start = (uint8_t)state->plus;
+    if (reset_state != state->home)
+    {
+        servo.write(state->home == NXAMF_BUTTON_STATE_PRESSED ? 65 : 90);
+        reset_state = state->home;
+    }
+
+    switch (state->hat)
+    {
+    case NXAMF_HAT_STATE_UP:
+        d.report.dup = 1;
+        d.report.dright = 0;
+        d.report.ddown = 0;
+        d.report.dleft = 0;
+        break;
+    case NXAMF_HAT_STATE_UPRIGHT:
+        d.report.dup = 1;
+        d.report.dright = 1;
+        d.report.ddown = 0;
+        d.report.dleft = 0;
+        break;
+    case NXAMF_HAT_STATE_RIGHT:
+        d.report.dup = 0;
+        d.report.dright = 1;
+        d.report.ddown = 0;
+        d.report.dleft = 0;
+        break;
+    case NXAMF_HAT_STATE_DOWNRIGHT:
+        d.report.dup = 0;
+        d.report.dright = 1;
+        d.report.ddown = 1;
+        d.report.dleft = 0;
+        break;
+    case NXAMF_HAT_STATE_DOWN:
+        d.report.dup = 0;
+        d.report.dright = 0;
+        d.report.ddown = 1;
+        d.report.dleft = 0;
+        break;
+    case NXAMF_HAT_STATE_DOWNLEFT:
+        d.report.dup = 0;
+        d.report.dright = 0;
+        d.report.ddown = 1;
+        d.report.dleft = 1;
+        break;
+    case NXAMF_HAT_STATE_LEFT:
+        d.report.dup = 0;
+        d.report.dright = 0;
+        d.report.ddown = 0;
+        d.report.dleft = 1;
+        break;
+    case NXAMF_HAT_STATE_UPLEFT:
+        d.report.dup = 1;
+        d.report.dright = 0;
+        d.report.ddown = 0;
+        d.report.dleft = 1;
+        break;
+    case NXAMF_HAT_STATE_NEUTRAL:
+    default:
+        d.report.dup = 0;
+        d.report.dright = 0;
+        d.report.ddown = 0;
+        d.report.dleft = 0;
+        break;
+    }
+
+    d.report.xAxis = state->l_stick.x;
+    // There are a few games that do not handle yAxis=0 correctly.
+    uint8_t y_axis = 0xFF - state->l_stick.y;
+    d.report.yAxis = y_axis == 0 ? 1 : y_axis;
+
+    d.report.cxAxis = state->r_stick.x;
+    // There are a few games that do not handle cyAxis=0 correctly.
+    uint8_t cy_axis = 0xFF - state->r_stick.y;
+    d.report.cyAxis = cy_axis == 0 ? 1 : cy_axis;
+
+    mutex_exit(&d_mutex);
+}
 
 void setup()
 {
     Serial.begin(9600);
 
+    pinMode(LED_BUILTIN, OUTPUT);
+    digitalWrite(LED_BUILTIN, LOW);
+
     // Setup for SG90
     servo.attach(PIN_SERVO, 500, 2400);
+
+    nxmc2_protocol = nxmc2_protocol_new();
+    if (nxmc2_protocol == NULL)
+    {
+        abort();
+    }
+    nxmc2 = nxamf_bytes_buffer_new((NxamfBytesProtocolInterface *)nxmc2_protocol);
+    if (nxmc2 == NULL)
+    {
+        abort();
+    }
+
+    pokecon_protocol = pokecon_protocol_new();
+    if (pokecon_protocol == NULL)
+    {
+        abort();
+    }
+    pokecon = nxamf_bytes_buffer_new((NxamfBytesProtocolInterface *)pokecon_protocol);
+    if (pokecon == NULL)
+    {
+        abort();
+    }
+}
+
+void loop()
+{
+    if (Serial.available() == 0)
+    {
+        inactive_count++;
+        if (SERIAL_INACTIVE_TIMEOUT < inactive_count)
+        {
+            inactive_count = 0;
+            clear_both();
+        }
+        return;
+    }
+    inactive_count = 0;
+
+    uint8_t packet = Serial.read();
+    NxamfGamepadState *state = append_both(packet);
+    if (state == NULL)
+    {
+        return;
+    }
+
+    reflect_state(state);
+}
+
+void setup1()
+{
+    mutex_init(&d_mutex);
+
+    mutex_enter_blocking(&d_mutex);
 
     d.report.a = 0;
     d.report.b = 0;
@@ -50,148 +243,16 @@ void setup()
     d.report.start = 0;
     console.write(d);
 
-    nxmc2_command_builder_new(&builder);
-    nxmc2_command_handler_new(&handler);
-    handler.y = [](Nxmc2CommandButtonState state)
-    { d.report.y = (uint8_t)state; };
-    handler.b = [](Nxmc2CommandButtonState state)
-    { d.report.b = (uint8_t)state; };
-    handler.a = [](Nxmc2CommandButtonState state)
-    { d.report.a = (uint8_t)state; };
-    handler.x = [](Nxmc2CommandButtonState state)
-    { d.report.x = (uint8_t)state; };
-    handler.l = [](Nxmc2CommandButtonState state)
-    { d.report.l = (uint8_t)state; };
-    handler.r = [](Nxmc2CommandButtonState state)
-    { d.report.r = (uint8_t)state; };
-    handler.zr = [](Nxmc2CommandButtonState state)
-    { d.report.z = (uint8_t)state; };
-    handler.plus = [](Nxmc2CommandButtonState state)
-    { d.report.start = (uint8_t)state; };
-    handler.home = [](Nxmc2CommandButtonState state)
-    {
-        if (reset_state_ == state)
-        {
-            return;
-        }
-
-        servo.write(state == NXMC2_COMMAND_BUTTON_STATE_PRESSED ? 65 : 90);
-        reset_state_ = state;
-    };
-    handler.hat = [](Nxmc2CommandHatState state)
-    {
-        switch (state)
-        {
-        case NXMC2_COMMAND_HAT_STATE_UP:
-            d.report.dup = 1;
-            d.report.dright = 0;
-            d.report.ddown = 0;
-            d.report.dleft = 0;
-            break;
-        case NXMC2_COMMAND_HAT_STATE_UPRIGHT:
-            d.report.dup = 1;
-            d.report.dright = 1;
-            d.report.ddown = 0;
-            d.report.dleft = 0;
-            break;
-        case NXMC2_COMMAND_HAT_STATE_RIGHT:
-            d.report.dup = 0;
-            d.report.dright = 1;
-            d.report.ddown = 0;
-            d.report.dleft = 0;
-            break;
-        case NXMC2_COMMAND_HAT_STATE_DOWNRIGHT:
-            d.report.dup = 0;
-            d.report.dright = 1;
-            d.report.ddown = 1;
-            d.report.dleft = 0;
-            break;
-        case NXMC2_COMMAND_HAT_STATE_DOWN:
-            d.report.dup = 0;
-            d.report.dright = 0;
-            d.report.ddown = 1;
-            d.report.dleft = 0;
-            break;
-        case NXMC2_COMMAND_HAT_STATE_DOWNLEFT:
-            d.report.dup = 0;
-            d.report.dright = 0;
-            d.report.ddown = 1;
-            d.report.dleft = 1;
-            break;
-        case NXMC2_COMMAND_HAT_STATE_LEFT:
-            d.report.dup = 0;
-            d.report.dright = 0;
-            d.report.ddown = 0;
-            d.report.dleft = 1;
-            break;
-        case NXMC2_COMMAND_HAT_STATE_UPLEFT:
-            d.report.dup = 1;
-            d.report.dright = 0;
-            d.report.ddown = 0;
-            d.report.dleft = 1;
-            break;
-        case NXMC2_COMMAND_HAT_STATE_NEUTRAL:
-        default:
-            d.report.dup = 0;
-            d.report.dright = 0;
-            d.report.ddown = 0;
-            d.report.dleft = 0;
-            break;
-        }
-    };
-    handler.l_stick = [](uint8_t x, uint8_t y)
-    {
-        d.report.xAxis = x;
-
-        // There are a few games that do not handle yAxis=0 correctly.
-        uint8_t y_axis = 0xFF - y;
-        d.report.yAxis = y_axis == 0 ? 1 : y_axis;
-    };
-    handler.r_stick = [](uint8_t x, uint8_t y)
-    {
-        d.report.cxAxis = x;
-
-        // There are a few games that do not handle cyAxis=0 correctly.
-        uint8_t cy_axis = 0xFF - y;
-        d.report.cyAxis = cy_axis == 0 ? 1 : cy_axis;
-    };
+    mutex_exit(&d_mutex);
 }
 
-void static update_data()
+void loop1()
 {
-    if (Serial.available() == 0)
-    {
-        inactive_count++;
-        if (SERIAL_INACTIVE_TIMEOUT < inactive_count)
-        {
-            inactive_count = 0;
-            nxmc2_command_builder_flush(&builder);
-        }
-        return;
-    }
-    inactive_count = 0;
+    mutex_enter_blocking(&d_mutex);
+    bool ret = console.write(d);
+    mutex_exit(&d_mutex);
 
-    Nxmc2Result ret = nxmc2_command_builder_append(&builder, Serial.read());
-    if (ret != NXMC2_RESULT_OK)
-    {
-        nxmc2_command_builder_flush(&builder);
-        return;
-    }
-
-    ret = nxmc2_command_builder_build(&builder, &command);
-    if (ret != NXMC2_RESULT_OK)
-    {
-        return;
-    }
-    nxmc2_command_execute(&command, &handler);
-
-    nxmc2_command_builder_flush(&builder);
-}
-
-void loop()
-{
-    update_data();
-    if (!console.write(d))
+    if (!ret)
     {
         Serial.println("GCが起動していないか、接続されていません。");
     }
