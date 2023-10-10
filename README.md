@@ -1,25 +1,25 @@
 # Jiangtun（江豚）
 
-NX Macro Controllerをゲームキューブ自動化に利用するためのRaspberry Pi Pico用ファームウェア
+[NX Macro Controller](https://blog.bzl-web.com/entry/2020/01/20/165719)/[Poke-Controller Modified](https://github.com/Moi-poke/Poke-Controller-Modified)をゲームキューブ自動化に利用するためのRaspberry Pi Pico用ファームウェア
 
 ゲームキューブ：`GPIO5`、サーボモーター：`GPIO6`を使用します（WHALE互換）。
 
-| NX Macro Controller | GameCube |
-| :-----------------: | :------: |
-|          Y          |    Y     |
-|          B          |    B     |
-|          A          |    A     |
-|          X          |    X     |
-|          L          |    L     |
-|          R          |    R     |
-|         ZL          |  (none)  |
-|         ZR          |    Z     |
-|          -          |  (none)  |
-|          +          |  Start   |
-|       L Click       |  (none)  |
-|       R Click       |  (none)  |
-|        Home         |  Reset   |
-|       Capture       |  (none)  |
+| NXMC2/PokeCon | GameCube |
+| :-----------: | :------: |
+|       Y       |    Y     |
+|       B       |    B     |
+|       A       |    A     |
+|       X       |    X     |
+|       L       |    L     |
+|       R       |    R     |
+|      ZL       |  (none)  |
+|      ZR       |    Z     |
+|       -       |  (none)  |
+|       +       |  Start   |
+|    L Click    |  (none)  |
+|    R Click    |  (none)  |
+|     Home      |  Reset   |
+|    Capture    |  (none)  |
 
 ## Build
 
