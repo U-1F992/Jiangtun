@@ -11,6 +11,8 @@
 #include "nxamf/nxmc2.h"
 #include "nxamf/pokecon.h"
 
+#include "orca.h"
+
 static const int SERIAL_INACTIVE_TIMEOUT = 100;
 static int inactive_count = 0;
 
@@ -22,7 +24,9 @@ static mutex_t d_mutex;
 
 static Nxmc2Protocol *nxmc2;
 static PokeConProtocol *pokecon;
-static NxamfBytesProtocolInterface *protocols[2];
+static OrcaProtocol *orca;
+static const size_t ORCA_INDEX = 2;
+static NxamfBytesProtocolInterface *protocols[3];
 static NxamfProtocolMultiplexer *mux;
 static NxamfBytesBuffer *buffer;
 
@@ -63,6 +67,15 @@ static void reflect_state(NxamfGamepadState *state)
     {
         servo.write(state->home == NXAMF_BUTTON_STATE_PRESSED ? 65 : 90);
         reset_state = state->home;
+
+        // ORCAのサーボモータ使用はブロッキング処理
+        if (mux->ready_index == ORCA_INDEX)
+        {
+            delay(500);
+            servo.write(90);
+            delay(500);
+            reset_state = NXAMF_BUTTON_STATE_RELEASED;
+        }
     }
 
     switch (state->hat)
@@ -149,10 +162,12 @@ void setup()
 
     nxmc2 = nxmc2_protocol_new();
     pokecon = pokecon_protocol_new();
+    orca = orca_protocol_new();
     protocols[0] = (NxamfBytesProtocolInterface *)nxmc2;
     protocols[1] = (NxamfBytesProtocolInterface *)pokecon;
-    mux = nxamf_protocol_multiplexer_new(protocols, 2);
-    if (nxmc2 == NULL || pokecon == NULL || mux == NULL)
+    protocols[2] = (NxamfBytesProtocolInterface *)orca;
+    mux = nxamf_protocol_multiplexer_new(protocols, 3);
+    if (nxmc2 == NULL || pokecon == NULL || orca == NULL || mux == NULL)
     {
         abort();
     }
