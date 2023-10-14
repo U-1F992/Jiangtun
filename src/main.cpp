@@ -20,11 +20,11 @@ static const int PIN_SERVO = 6;
 static Gamecube_Data_t d = defaultGamecubeData;
 static mutex_t d_mutex;
 
-static Nxmc2Protocol *nxmc2_protocol;
-static NxamfBytesBuffer *nxmc2;
-
-static PokeConProtocol *pokecon_protocol;
-static NxamfBytesBuffer *pokecon;
+static Nxmc2Protocol *nxmc2;
+static PokeConProtocol *pokecon;
+static NxamfBytesProtocolInterface *protocols[2];
+static NxamfProtocolMultiplexer *mux;
+static NxamfBytesBuffer *buffer;
 
 static NxamfButtonState reset_state = NXAMF_BUTTON_STATE_RELEASED;
 
@@ -38,24 +38,6 @@ static void async_led_on_for_100ms()
 {
     digitalWriteFast(LED_BUILTIN, HIGH);
     alarm_id_t alarm_id = add_alarm_in_ms(100, led_off, NULL, false);
-}
-
-static NxamfGamepadState *append_both(uint8_t packet)
-{
-    NxamfGamepadState *n = nxamf_bytes_buffer_append(nxmc2, packet);
-    if (n != NULL)
-    {
-        return n;
-    }
-
-    NxamfGamepadState *p = nxamf_bytes_buffer_append(pokecon, packet);
-    return p;
-}
-
-static void clear_both()
-{
-    nxamf_bytes_buffer_clear(nxmc2);
-    nxamf_bytes_buffer_clear(pokecon);
 }
 
 static void reflect_state(NxamfGamepadState *state)
@@ -165,24 +147,17 @@ void setup()
     // Setup for SG90
     servo.attach(PIN_SERVO, 500, 2400);
 
-    nxmc2_protocol = nxmc2_protocol_new();
-    if (nxmc2_protocol == NULL)
+    nxmc2 = nxmc2_protocol_new();
+    pokecon = pokecon_protocol_new();
+    protocols[0] = (NxamfBytesProtocolInterface *)nxmc2;
+    protocols[1] = (NxamfBytesProtocolInterface *)pokecon;
+    mux = nxamf_protocol_multiplexer_new(protocols, 2);
+    if (nxmc2 == NULL || pokecon == NULL || mux == NULL)
     {
         abort();
     }
-    nxmc2 = nxamf_bytes_buffer_new((NxamfBytesProtocolInterface *)nxmc2_protocol);
-    if (nxmc2 == NULL)
-    {
-        abort();
-    }
-
-    pokecon_protocol = pokecon_protocol_new();
-    if (pokecon_protocol == NULL)
-    {
-        abort();
-    }
-    pokecon = nxamf_bytes_buffer_new((NxamfBytesProtocolInterface *)pokecon_protocol);
-    if (pokecon == NULL)
+    buffer = nxamf_bytes_buffer_new((NxamfBytesProtocolInterface *)mux);
+    if (buffer == NULL)
     {
         abort();
     }
@@ -196,14 +171,14 @@ void loop()
         if (SERIAL_INACTIVE_TIMEOUT < inactive_count)
         {
             inactive_count = 0;
-            clear_both();
+            nxamf_bytes_buffer_clear(buffer);
         }
         return;
     }
     inactive_count = 0;
 
     uint8_t packet = Serial.read();
-    NxamfGamepadState *state = append_both(packet);
+    NxamfGamepadState *state = nxamf_bytes_buffer_append(buffer, packet);
     if (state == NULL)
     {
         return;
@@ -254,6 +229,6 @@ void loop1()
 
     if (!ret)
     {
-        Serial.println("GCが起動していないか、接続されていません。");
+        Serial.println("GC is not powered on or not connected.");
     }
 }
