@@ -4,7 +4,7 @@ GC automation alternative firmware for Raspberry Pi Pico.
 
 - [NX Macro Controller](https://blog.bzl-web.com/entry/2020/01/20/165719)
 - [Poke-Controller Modified](https://github.com/Moi-poke/Poke-Controller-Modified)
-- [ORCA GC Controller](https://github.com/yatsuna827/Orca-GC-Controller)(experimental)
+- [ORCA GC Controller](https://github.com/yatsuna827/Orca-GC-Controller) (experimental)
 
 Use GameCube: `GPIO5`, Servo: `GPIO6`. ([WHALE](https://github.com/mizuyoukanao/Bluewhale) compatible)
 
