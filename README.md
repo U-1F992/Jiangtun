@@ -1,8 +1,14 @@
-# Jiangtun（江豚）
+# Jiangtun (江豚)
 
-[NX Macro Controller](https://blog.bzl-web.com/entry/2020/01/20/165719)/[Poke-Controller Modified](https://github.com/Moi-poke/Poke-Controller-Modified)をゲームキューブ自動化に利用するためのRaspberry Pi Pico用ファームウェア
+GC automation alternative firmware for Raspberry Pi Pico.
 
-ゲームキューブ：`GPIO5`、サーボモーター：`GPIO6`を使用します（WHALE互換）。
+- [NX Macro Controller](https://blog.bzl-web.com/entry/2020/01/20/165719)
+- [Poke-Controller Modified](https://github.com/Moi-poke/Poke-Controller-Modified)
+- [ORCA GC Controller](https://github.com/yatsuna827/Orca-GC-Controller)(experimental)
+
+Use GameCube: `GPIO5`, Servo: `GPIO6`. ([WHALE](https://github.com/mizuyoukanao/Bluewhale) compatible)
+
+## Button mapping
 
 | NXMC2/PokeCon | GameCube |
 | :-----------: | :------: |
@@ -21,11 +27,9 @@
 |     Home      |  Reset   |
 |    Capture    |  (none)  |
 
-## Build
+## Development
 
-サブモジュールを含むので`--recursive`を付けてクローンしてください。
-
-Git for Windowsのパス文字数制限に注意。\[[詳細](https://arduino-pico.readthedocs.io/en/latest/platformio.html)\]
+This directory is a [PlatformIO](https://platformio.org/) project. Clone with `--recursive` as it contains submodules. Note [the path character length limit in Git for Windows](https://arduino-pico.readthedocs.io/en/latest/platformio.html#important-steps-for-windows-users-before-installing).
 
 ```
 git config --system core.longpaths true
