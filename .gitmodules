@@ -3,4 +3,4 @@
 	url = https://github.com/mizuyoukanao/Bluewhale.git
 [submodule "lib/nx_automation_meta_firmware"]
 	path = lib/nx_automation_meta_firmware
-	url = https://github.com/u1F992/nx_automation_meta_firmware.git
+	url = https://github.com/U-1F992/nx_automation_meta_firmware.git
