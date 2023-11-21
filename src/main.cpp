@@ -237,12 +237,12 @@ void setup()
     Serial1.setRX(1);
     Serial1.begin();
     mutex_exit(&serial1_mutex);
-#define Serial1_println(msg)              \
+#define debug_println(msg)              \
     mutex_enter_blocking(&serial1_mutex); \
     Serial1.println(msg);                 \
     mutex_exit(&serial1_mutex);
 #else
-#define Serial1_println(msg) ((void)0)
+#define debug_println(msg) ((void)0)
 #endif
 
     // Setup for SG90
@@ -310,14 +310,14 @@ void loop()
     inactive_count = 0;
 
     uint8_t packet = Serial.read();
-    Serial1_println(packet);
+    debug_println(packet);
     NxamfGamepadState *state = nxamf_bytes_buffer_append(buffer, packet);
     if (state == NULL)
     {
         return;
     }
 
-    Serial1_println(format_state(state));
+    debug_println(format_state(state));
     reflect_state(state);
 
     nxamf_gamepad_state_delete(state);
@@ -336,6 +336,6 @@ void loop1()
 
     if (!ret)
     {
-        Serial1_println("GC is not powered on or not connected.");
+        debug_println("GC is not powered on or not connected.");
     }
 }
