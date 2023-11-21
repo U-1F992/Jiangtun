@@ -130,7 +130,7 @@ static void reflect_state(NxamfGamepadState *state)
     async_led_on_for_100ms();
 
     mutex_enter_blocking(&d_mutex);
-    
+
     d.report.y = (uint8_t)state->y;
     d.report.b = (uint8_t)state->b;
     d.report.a = (uint8_t)state->a;
@@ -293,6 +293,20 @@ void setup()
 
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, LOW);
+
+    // Blink if the setup routine succeeded.
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(200);
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(200);
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(200);
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(200);
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(200);
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(200);
 }
 
 void loop()
