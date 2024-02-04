@@ -7,6 +7,7 @@
 #include "Bluewhale.h"
 
 #include "nthaka.h"
+#include "nthaka/dol.h"
 #include "nthaka/nxmc2.h"
 #include "nthaka/orca.h"
 #include "nthaka/pokecon.h"
@@ -16,20 +17,39 @@
 
 static jiangtun_t j;
 
+#ifdef JIANGTUN_CONFIG_BOARD_XIAO_RP2040
+#define PIN_RESET 3
+#define PIN_GC 7
+#define PIN_SERVO 0
+#else // JIANGTUN_CONFIG_BOARD_PICO
+#define PIN_RESET 3
+#define PIN_GC 5
+#define PIN_SERVO 6
+#endif
+
 static Servo servo;
-static const int PIN_SERVO = 6;
 
 static mutex_t mtx;
-static CGamecubeConsole console(5);
+static CGamecubeConsole console(PIN_GC);
 static Gamecube_Data_t gc = defaultGamecubeData;
 
+static dol_format_handler_t dol;
 static nxmc2_format_handler_t nxmc2;
 static orca_format_handler_t orca;
 static pokecon_format_handler_t pokecon;
-static nthaka_format_handler_t *fmts[] = {(nthaka_format_handler_t *)&nxmc2, //
-                                          (nthaka_format_handler_t *)&orca,  //
-                                          (nthaka_format_handler_t *)&pokecon};
-static size_t idx_using_servo[] = {1};
+static nthaka_format_handler_t *fmts[] = {(nthaka_format_handler_t *)&nxmc2,
+                                          (nthaka_format_handler_t *)&orca,
+#ifdef JIANGTUN_CONFIG_ENABLE_DOL
+                                          (nthaka_format_handler_t *)&dol
+#else
+                                          (nthaka_format_handler_t *)&pokecon
+#endif // JIANGTUN_CONFIG_ENABLE_DOL
+};
+static size_t idx_using_servo[] = {1,
+#ifdef JIANGTUN_CONFIG_ENABLE_DOL
+                                   2
+#endif // JIANGTUN_CONFIG_ENABLE_DOL
+};
 static nthaka_multi_format_handler_t fmt;
 static nthaka_buffer_t buf;
 static nthaka_gamepad_state_t out;
@@ -51,10 +71,6 @@ void setup()
     Serial.setTimeout(100);
     Serial.begin(9600);
 
-    Serial1.setTX(0);
-    Serial1.setRX(1);
-    Serial1.begin(115200);
-
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, LOW);
 
@@ -65,7 +81,8 @@ void setup()
 
     gc_console_data_init(&console, &gc, &mtx);
 
-    if (!(nxmc2_format_handler_init(&nxmc2) &&
+    if (!(dol_format_handler_init(&dol) &&
+          nxmc2_format_handler_init(&nxmc2) &&
           orca_format_handler_init(&orca) &&
           pokecon_format_handler_init(&pokecon) &&
           nthaka_multi_format_handler_init(&fmt, fmts, 3) &&
@@ -98,7 +115,7 @@ void loop()
     if (idx == NULL)
     {
         *idx = 0;
-    };
+    }
 
     async_led_on(100);
     jiangtun_update(&j, &out, *idx, &gc);
@@ -117,6 +134,6 @@ void loop1()
 
     if (!ret)
     {
-        Serial1.println("GC is not powered on or not connected.");
+        Serial.println("GC is not powered on or not connected.");
     }
 }
