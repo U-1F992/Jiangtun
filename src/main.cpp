@@ -45,9 +45,9 @@ static nthaka_format_handler_t *fmts[] = {(nthaka_format_handler_t *)&nxmc2,
                                           (nthaka_format_handler_t *)&pokecon
 #endif // JIANGTUN_CONFIG_ENABLE_DOL
 };
-static size_t idx_using_servo[] = {1,
+static size_t idx_servo_blocking[] = {1,
 #ifdef JIANGTUN_CONFIG_ENABLE_DOL
-                                   2
+                                      2
 #endif // JIANGTUN_CONFIG_ENABLE_DOL
 };
 static nthaka_multi_format_handler_t fmt;
@@ -74,8 +74,11 @@ void setup()
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, LOW);
 
+    pinMode(PIN_RESET, INPUT); // Hi-Z
+
     // Setup for SG90
     servo.attach(PIN_SERVO, 500, 2400);
+    servo.write(90);
 
     mutex_init(&mtx);
 
@@ -88,11 +91,15 @@ void setup()
           nthaka_multi_format_handler_init(&fmt, fmts, 3) &&
           nthaka_buffer_init(&buf, (nthaka_format_handler_t *)&fmt) &&
 
-          jiangtun_init(&j, &servo, idx_using_servo, sizeof(idx_using_servo) / sizeof(size_t), &mtx)))
+          jiangtun_init(&j, PIN_RESET, &servo, idx_servo_blocking, sizeof(idx_servo_blocking) / sizeof(size_t), &mtx)))
     {
-        digitalWrite(LED_BUILTIN, HIGH);
         while (true)
-            ;
+        {
+            digitalWrite(LED_BUILTIN, HIGH);
+            delay(100);
+            digitalWrite(LED_BUILTIN, LOW);
+            delay(100);
+        }
     }
 }
 
@@ -124,6 +131,7 @@ void loop()
 
 void setup1()
 {
+    delay(10);
 }
 
 void loop1()

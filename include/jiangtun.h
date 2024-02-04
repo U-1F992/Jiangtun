@@ -1,6 +1,7 @@
 #ifndef JIANGTUN_H_
 #define JIANGTUN_H_
 
+#include <Arduino.h>
 #include <Servo.h>
 
 #include "pico/mutex.h"
@@ -11,27 +12,29 @@
 
 typedef struct jiangtun_t
 {
+    pin_size_t _reset;
     Servo *_servo;
-    size_t *_idx_using_servo;
-    size_t _idx_using_servo_size;
+    size_t *_idx_servo_blocking;
+    size_t _idx_servo_blocking_size;
     mutex_t *_mtx;
 
     nthaka_button_state_t _reset_state;
 } jiangtun_t;
 
-inline bool jiangtun_init(jiangtun_t *j, Servo *servo, size_t idx_using_servo[], size_t size, mutex_t *mtx)
+inline bool jiangtun_init(jiangtun_t *j, pin_size_t reset, Servo *servo, size_t idx_servo_blocking[], size_t size, mutex_t *mtx)
 {
     if (j == NULL ||
         servo == NULL ||
-        idx_using_servo == NULL ||
+        idx_servo_blocking == NULL ||
         mtx == NULL)
     {
         return false;
     }
 
+    j->_reset = reset;
     j->_servo = servo;
-    j->_idx_using_servo = idx_using_servo;
-    j->_idx_using_servo_size = size;
+    j->_idx_servo_blocking = idx_servo_blocking;
+    j->_idx_servo_blocking_size = size;
     j->_mtx = mtx;
 
     j->_reset_state = NTHAKA_BUTTON_RELEASED;
