@@ -21,20 +21,30 @@ void jiangtun_update(jiangtun_t *j, nthaka_gamepad_state_t *s, size_t idx_from, 
     bool servo_up = false;
     if (j->_reset_state != s->home)
     {
-        j->_servo->write(s->home == NTHAKA_BUTTON_PRESSED ? 65 : 90);
-        j->_reset_state = s->home;
-
-        pinMode(j->_reset, OUTPUT);
-        digitalWrite(j->_reset, LOW);
-
-        // For listed idx, use servo with blocking
-        for (size_t i = 0; i < j->_idx_servo_blocking_size; i++)
+        if (s->home == NTHAKA_BUTTON_PRESSED)
         {
-            if (j->_idx_servo_blocking[i] == idx_from)
+            j->_reset_state = NTHAKA_BUTTON_PRESSED;
+
+            j->_servo->write(65);
+            pinMode(j->_reset, OUTPUT);
+            digitalWrite(j->_reset, LOW);
+
+            // For listed idx, use servo with blocking
+            for (size_t i = 0; i < j->_idx_servo_blocking_size; i++)
             {
-                servo_up = true;
-                break;
+                if (j->_idx_servo_blocking[i] == idx_from)
+                {
+                    servo_up = true;
+                    break;
+                }
             }
+        }
+        else
+        {
+            j->_reset_state = NTHAKA_BUTTON_RELEASED;
+
+            j->_servo->write(90);
+            pinMode(j->_reset, INPUT);
         }
     }
 
@@ -110,11 +120,11 @@ void jiangtun_update(jiangtun_t *j, nthaka_gamepad_state_t *s, size_t idx_from, 
 
     if (servo_up)
     {
-        delay(500);
-        j->_servo->write(90);
-        delay(500);
         j->_reset_state = NTHAKA_BUTTON_RELEASED;
 
+        delay(500);
+        j->_servo->write(90);
         pinMode(j->_reset, INPUT);
+        delay(500);
     }
 }
