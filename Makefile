@@ -27,19 +27,19 @@ endif
 dist:
 	mkdir dist
 
-dist/firmware-pico.uf2: .pio/build/pico/firmware.uf2 dist
+dist/jiangtun-pico.uf2: .pio/build/pico/firmware.uf2 dist
 	$(CP) $(call FIXPATH,$<) $(call FIXPATH,$@)
 
-dist/firmware-dol-pico.uf2: .pio/build/dol-pico/firmware.uf2 dist
+dist/jiangtun-dol-pico.uf2: .pio/build/dol-pico/firmware.uf2 dist
 	$(CP) $(call FIXPATH,$<) $(call FIXPATH,$@)
 
-dist/firmware-xiao-rp2040.uf2: .pio/build/xiao-rp2040/firmware.uf2 dist
+dist/jiangtun-xiao-rp2040.uf2: .pio/build/xiao-rp2040/firmware.uf2 dist
 	$(CP) $(call FIXPATH,$<) $(call FIXPATH,$@)
 
-dist/firmware-dol-xiao-rp2040.uf2: .pio/build/dol-xiao-rp2040/firmware.uf2 dist
+dist/jiangtun-dol-xiao-rp2040.uf2: .pio/build/dol-xiao-rp2040/firmware.uf2 dist
 	$(CP) $(call FIXPATH,$<) $(call FIXPATH,$@)
 
-all: dist/firmware-pico.uf2 dist/firmware-dol-pico.uf2 dist/firmware-xiao-rp2040.uf2 dist/firmware-dol-xiao-rp2040.uf2
+all: dist/jiangtun-pico.uf2 dist/jiangtun-dol-pico.uf2 dist/jiangtun-xiao-rp2040.uf2 dist/jiangtun-dol-xiao-rp2040.uf2
 
 clean:
 	$(RM) $(call FIXPATH,dist/*)
