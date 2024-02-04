@@ -4,13 +4,13 @@ ifeq ($(OS),Windows_NT)
     RM = powershell -Command Remove-Item -Recurse -Force
 	CP = copy
     FIXPATH = $(subst /,\,$1)
+	PIO = $(USERPROFILE)\.platformio\penv\Scripts\platformio.exe
 else
     RM = rm -rf
 	CP = cp
     FIXPATH = $1
+	PIO = $(HOME)/.platformio/penv/bin/platformio
 endif
-
-PIO = C:\Users\mukai\.platformio\penv\Scripts\platformio.exe
 
 .pio/build/pico/firmware.uf2:
 	$(PIO) run --environment pico
