@@ -12,6 +12,8 @@ else
 	PIO = $(HOME)/.platformio/penv/bin/platformio
 endif
 
+VERSION = v2.0.0-alpha
+
 .pio/build/pico/firmware.uf2: src/main.cpp src/jiangtun.h
 	$(PIO) run --environment pico
 
@@ -27,19 +29,19 @@ endif
 dist:
 	mkdir dist
 
-dist/jiangtun-pico.uf2: .pio/build/pico/firmware.uf2 dist
+dist/jiangtun-$(VERSION)-pico.uf2: .pio/build/pico/firmware.uf2 dist
 	$(CP) $(call FIXPATH,$<) $(call FIXPATH,$@)
 
-dist/jiangtun-dol-pico.uf2: .pio/build/dol-pico/firmware.uf2 dist
+dist/jiangtun-$(VERSION)-dol-pico.uf2: .pio/build/dol-pico/firmware.uf2 dist
 	$(CP) $(call FIXPATH,$<) $(call FIXPATH,$@)
 
-dist/jiangtun-xiao-rp2040.uf2: .pio/build/xiao-rp2040/firmware.uf2 dist
+dist/jiangtun-$(VERSION)-xiao-rp2040.uf2: .pio/build/xiao-rp2040/firmware.uf2 dist
 	$(CP) $(call FIXPATH,$<) $(call FIXPATH,$@)
 
-dist/jiangtun-dol-xiao-rp2040.uf2: .pio/build/dol-xiao-rp2040/firmware.uf2 dist
+dist/jiangtun-$(VERSION)-dol-xiao-rp2040.uf2: .pio/build/dol-xiao-rp2040/firmware.uf2 dist
 	$(CP) $(call FIXPATH,$<) $(call FIXPATH,$@)
 
-all: dist/jiangtun-pico.uf2 dist/jiangtun-dol-pico.uf2 dist/jiangtun-xiao-rp2040.uf2 dist/jiangtun-dol-xiao-rp2040.uf2
+all: dist/jiangtun-$(VERSION)-pico.uf2 dist/jiangtun-$(VERSION)-dol-pico.uf2 dist/jiangtun-$(VERSION)-xiao-rp2040.uf2 dist/jiangtun-$(VERSION)-dol-xiao-rp2040.uf2
 
 clean:
 	$(RM) $(call FIXPATH,dist/*)
