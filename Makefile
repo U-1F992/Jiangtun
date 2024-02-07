@@ -12,16 +12,16 @@ else
 	PIO = $(HOME)/.platformio/penv/bin/platformio
 endif
 
-.pio/build/pico/firmware.uf2: src/main.cpp src/jiangtun.cpp src/internal.h include/jiangtun.h
+.pio/build/pico/firmware.uf2: src/main.cpp src/jiangtun.h
 	$(PIO) run --environment pico
 
-.pio/build/dol-pico/firmware.uf2: src/main.cpp src/jiangtun.cpp src/internal.h include/jiangtun.h
+.pio/build/dol-pico/firmware.uf2: src/main.cpp src/jiangtun.h
 	$(PIO) run --environment dol-pico
 
-.pio/build/xiao-rp2040/firmware.uf2: src/main.cpp src/jiangtun.cpp src/internal.h include/jiangtun.h
+.pio/build/xiao-rp2040/firmware.uf2: src/main.cpp src/jiangtun.h
 	$(PIO) run --environment xiao-rp2040
 
-.pio/build/dol-xiao-rp2040/firmware.uf2: src/main.cpp src/jiangtun.cpp src/internal.h include/jiangtun.h
+.pio/build/dol-xiao-rp2040/firmware.uf2: src/main.cpp src/jiangtun.h
 	$(PIO) run --environment dol-xiao-rp2040
 
 dist:
