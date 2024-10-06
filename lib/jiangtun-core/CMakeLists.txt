@@ -12,7 +12,12 @@ target_compile_options(jiangtun-core PRIVATE -Wall -Wextra -Wpedantic -Werror)
 
 enable_testing()
 
-add_executable(jiangtun-core_test_lexer test/lexer.c)
-target_link_libraries(jiangtun-core_test_lexer jiangtun-core)
-target_compile_options(jiangtun-core_test_lexer PRIVATE -Wall -Wextra -Wpedantic -Werror)
-add_test(NAME jiangtun-core_test_lexer COMMAND jiangtun-core_test_lexer)
+add_executable(jiangtun-core_test_command test/command.c)
+target_link_libraries(jiangtun-core_test_command jiangtun-core)
+target_compile_options(jiangtun-core_test_command PRIVATE -Wall -Wextra -Wpedantic -Werror)
+add_test(NAME jiangtun-core_test_command COMMAND jiangtun-core_test_command)
+
+add_executable(jiangtun-core_test_arduino test/arduino.c)
+target_link_libraries(jiangtun-core_test_arduino jiangtun-core)
+target_compile_options(jiangtun-core_test_arduino PRIVATE -Wall -Wextra -Wpedantic -Werror)
+add_test(NAME jiangtun-core_test_arduino COMMAND jiangtun-core_test_arduino)
