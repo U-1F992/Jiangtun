@@ -61,7 +61,7 @@ void jiangtun_report_init(jiangtun_report_mode3_t *);
  * controller's axis values do not usually occur in actual input. As a result,
  * some games may not handle these values correctly.
  */
-void jiangtun_emend_axis(jiangtun_report_mode3_t *);
+void jiangtun_report_emend_axis(jiangtun_report_mode3_t *);
 
 #ifdef __cplusplus
 }

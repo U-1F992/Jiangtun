@@ -279,22 +279,22 @@ int test(void) {
         }
 
         for (j = 0; j < test_case->length; j++) {
-            jiangtun_push(command, test_case->buffer[j]);
+            jiangtun_command_push(command, test_case->buffer[j]);
         }
 
         switch (test_case->expected) {
         case TEST_PENDING:
-            TEST_ASSERT(jiangtun_pending(command));
+            TEST_ASSERT(jiangtun_command_pending(command));
             break;
         case TEST_ACCEPTED:
-            TEST_ASSERT(jiangtun_accepted(command));
-            TEST_ASSERT(jiangtun_run(command, &report));
+            TEST_ASSERT(jiangtun_command_accepted(command));
+            TEST_ASSERT(jiangtun_command_run(command, &report));
             if (test_case->expected_report != NULL) {
                 TEST_COMPARE(test_case->expected_report, &(report));
             }
             break;
         case TEST_REJECTED:
-            TEST_ASSERT(jiangtun_rejected(command));
+            TEST_ASSERT(jiangtun_command_rejected(command));
             break;
         default:
             assert(0);

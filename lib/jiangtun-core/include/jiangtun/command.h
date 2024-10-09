@@ -19,21 +19,16 @@ typedef struct jiangtun_command_t {
     jiangtun_action_t action;
 } jiangtun_command_t;
 
-/*
- * In C, a struct must be declared before it can be used in a function pointer
- * declaration. Therefore, `jiangtun_command_t` is declared first, followed by
- * the `jiangtun_transition_t` function pointer type.
- */
 typedef void (*jiangtun_transition_t)(jiangtun_command_t *, jiangtun_uint8_t);
 
 void jiangtun_command_init(jiangtun_command_t *, jiangtun_transition_t,
                            jiangtun_action_t);
-void jiangtun_push(jiangtun_command_t *, jiangtun_uint8_t);
-jiangtun_bool_t jiangtun_run(jiangtun_command_t *, void *);
+void jiangtun_command_push(jiangtun_command_t *, jiangtun_uint8_t);
+jiangtun_bool_t jiangtun_command_run(jiangtun_command_t *, void *);
 
-jiangtun_bool_t jiangtun_pending(jiangtun_command_t *);
-jiangtun_bool_t jiangtun_accepted(jiangtun_command_t *);
-jiangtun_bool_t jiangtun_rejected(jiangtun_command_t *);
+jiangtun_bool_t jiangtun_command_pending(jiangtun_command_t *);
+jiangtun_bool_t jiangtun_command_accepted(jiangtun_command_t *);
+jiangtun_bool_t jiangtun_command_rejected(jiangtun_command_t *);
 
 /**
  * NX Macro Controller

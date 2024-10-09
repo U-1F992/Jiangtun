@@ -30,7 +30,7 @@ void jiangtun_report_init(jiangtun_report_mode3_t *report) {
 #define EMEND_AXIS(axis)                                                       \
     ((axis) = (axis) == 0 ? 1 : (axis) == 255 ? 254 : (axis))
 
-void jiangtun_emend_axis(jiangtun_report_mode3_t *report) {
+void jiangtun_report_emend_axis(jiangtun_report_mode3_t *report) {
     assert(report != NULL);
 
     EMEND_AXIS(report->xAxis);

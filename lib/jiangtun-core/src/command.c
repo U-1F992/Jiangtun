@@ -26,7 +26,7 @@ static jiangtun_bool_t jiangtun_terminal(jiangtun_command_t *command) {
            /* for safety */ command->transition == NULL;
 }
 
-jiangtun_bool_t jiangtun_pending(jiangtun_command_t *command) {
+jiangtun_bool_t jiangtun_command_pending(jiangtun_command_t *command) {
     assert(command != NULL);
 
     return !jiangtun_terminal(command) &&
@@ -34,14 +34,14 @@ jiangtun_bool_t jiangtun_pending(jiangtun_command_t *command) {
             /* for safety */ command->action == NULL);
 }
 
-jiangtun_bool_t jiangtun_accepted(jiangtun_command_t *command) {
+jiangtun_bool_t jiangtun_command_accepted(jiangtun_command_t *command) {
     assert(command != NULL);
 
     return command->action != action_default &&
            /* for safety */ command->action != NULL;
 }
 
-jiangtun_bool_t jiangtun_rejected(jiangtun_command_t *command) {
+jiangtun_bool_t jiangtun_command_rejected(jiangtun_command_t *command) {
     assert(command != NULL);
 
     return jiangtun_terminal(command) &&
@@ -64,12 +64,12 @@ void append_if_not_rejected(jiangtun_command_t *command, jiangtun_uint8_t c,
     assert(command != NULL);
 
     jiangtun_command_init(command, transition, action);
-    if (!jiangtun_rejected(command)) {
+    if (!jiangtun_command_rejected(command)) {
         command->buffer[command->length++] = c;
     }
 }
 
-void jiangtun_push(jiangtun_command_t *command, jiangtun_uint8_t c) {
+void jiangtun_command_push(jiangtun_command_t *command, jiangtun_uint8_t c) {
     assert(command != NULL);
 
     if (jiangtun_terminal(command)) {
@@ -78,10 +78,11 @@ void jiangtun_push(jiangtun_command_t *command, jiangtun_uint8_t c) {
     command->transition(command, c);
 }
 
-jiangtun_bool_t jiangtun_run(jiangtun_command_t *command, void *context) {
+jiangtun_bool_t jiangtun_command_run(jiangtun_command_t *command,
+                                     void *context) {
     assert(command != NULL);
 
-    return jiangtun_accepted(command)
+    return jiangtun_command_accepted(command)
                ? command->action(command->buffer, command->length, context)
                : JIANGTUN_FALSE;
 }

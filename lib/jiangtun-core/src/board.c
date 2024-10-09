@@ -2,39 +2,48 @@
 
 #include <assert.h>
 
-jiangtun_bool_t jiangtun_board_serial_read(jiangtun_board_t *board,
+jiangtun_bool_t jiangtun_board_serial_getc(jiangtun_board_t *board,
                                            jiangtun_uint8_t *c) {
     assert(board != NULL);
     assert(c != NULL);
 
-    return board->serial_read(board, c);
+    return board->serial_getc(board, c);
 }
 
-void jiangtun_board_gamecube_send(jiangtun_board_t *board,
-                                  jiangtun_report_mode3_t *report) {
+void jiangtun_board_serial_puts(jiangtun_board_t *board, const char *s) {
+    assert(board != NULL);
+    assert(s != NULL);
+
+    board->serial_puts(board, s);
+}
+
+jiangtun_bool_t jiangtun_board_gamecube_send(jiangtun_board_t *board,
+                                             jiangtun_report_mode3_t *report) {
     assert(board != NULL);
     assert(report != NULL);
 
-    board->gamecube_send(board, report);
+    return board->gamecube_send(board, report);
 }
 
-void jiangtun_board_led_blink_async(jiangtun_board_t *board,
-                                    jiangtun_uint32_t duration) {
+void jiangtun_board_led_set(jiangtun_board_t *board, jiangtun_bool_t state) {
     assert(board != NULL);
 
-    board->led_blink_async(board, duration);
+    board->led_set(board, state);
 }
 
 void jiangtun_board_init(jiangtun_board_t *board,
-                         jiangtun_serial_read_t serial_read,
+                         jiangtun_serial_getc_t serial_getc,
+                         jiangtun_serial_puts_t serial_puts,
                          jiangtun_gamecube_send_t gamecube_send,
-                         jiangtun_led_blink_async_t led_blink_async) {
+                         jiangtun_led_set_t led_set) {
     assert(board != NULL);
-    assert(serial_read != NULL);
+    assert(serial_getc != NULL);
+    assert(serial_puts != NULL);
     assert(gamecube_send != NULL);
-    assert(led_blink_async != NULL);
+    assert(led_set != NULL);
 
-    board->serial_read = serial_read;
+    board->serial_getc = serial_getc;
+    board->serial_puts = serial_puts;
     board->gamecube_send = gamecube_send;
-    board->led_blink_async = led_blink_async;
+    board->led_set = led_set;
 }

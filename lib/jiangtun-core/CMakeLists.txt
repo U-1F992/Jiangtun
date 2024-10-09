@@ -1,9 +1,11 @@
 cmake_minimum_required(VERSION 3.10)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 project(jiangtun-core VERSION 0.1.0)
 set(CMAKE_C_STANDARD 90)
+set(CMAKE_C_EXTENSIONS OFF)
 
 file(GLOB_RECURSE SRC_FILES src/*.c)
 add_library(jiangtun-core STATIC ${SRC_FILES})
