@@ -12,10 +12,10 @@ extern "C" {
 #endif
 
 #ifndef JIANGTUN_MICROSECONDS_PER_LOOP
-#define JIANGTUN_MICROSECONDS_PER_LOOP 0.54
-#endif /* JIANGTUN_MICROSECONDS_PER_LOOP */
+#define JIANGTUN_MICROSECONDS_PER_LOOP 2500
+#endif
 #define JIANGTUN_LOOPS_FOR_MILLISECONDS(ms)                                    \
-    ((jiangtun_uint32_t)((1000 * (ms)) / JIANGTUN_MICROSECONDS_PER_LOOP) + 1)
+    ((jiangtun_uint32_t)((ms) * 1000 / JIANGTUN_MICROSECONDS_PER_LOOP) + 1)
 #define JIANGTUN_LOOPS_FOR_TIMEOUT JIANGTUN_LOOPS_FOR_MILLISECONDS(5)
 #define JIANGTUN_LOOPS_FOR_LED JIANGTUN_LOOPS_FOR_MILLISECONDS(100)
 #define JIANGTUN_LOOPS_FOR_RESET_BLOCKING JIANGTUN_LOOPS_FOR_MILLISECONDS(500)
@@ -69,6 +69,8 @@ typedef struct jiangtun_t {
     jiangtun_uint32_t reset_blocking_loop;
 
     jiangtun_log_level_t log_level;
+
+    char buffer[128];
     char log_buffer[128];
 } jiangtun_t;
 
