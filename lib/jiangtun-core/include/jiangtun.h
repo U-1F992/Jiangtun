@@ -12,7 +12,7 @@ extern "C" {
 #endif
 
 #ifndef JIANGTUN_MICROSECONDS_PER_LOOP
-#define JIANGTUN_MICROSECONDS_PER_LOOP 2500
+#define JIANGTUN_MICROSECONDS_PER_LOOP 925
 #endif
 #define JIANGTUN_LOOPS_FOR_MILLISECONDS(ms)                                    \
     ((jiangtun_uint32_t)((ms) * 1000 / JIANGTUN_MICROSECONDS_PER_LOOP) + 1)
