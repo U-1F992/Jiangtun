@@ -36,7 +36,7 @@ static jiangtun_bool_t patch(const jiangtun_uint8_t *buffer, size_t length,
     report->l = (btn0 >> 4) & 1;
     report->r = (btn0 >> 5) & 1;
     /* zl = (btn0 >> 6) & 1; */
-    report->z = (btn1 >> 7) & 1;
+    report->z = (btn0 >> 7) & 1;
     /* minus = (btn1 >> 0) & 1; */
     report->start = (btn1 >> 1) & 1;
     /* l_click = (btn1 >> 2) & 1; */
