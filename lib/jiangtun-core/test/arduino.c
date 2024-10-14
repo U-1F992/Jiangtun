@@ -21,9 +21,11 @@ static void serial_puts(jiangtun_board_t *board, const char *s) {
 }
 
 static jiangtun_bool_t gamecube_send(jiangtun_board_t *board,
+                                     jiangtun_bool_t changed,
                                      jiangtun_report_mode3_t *report) {
     assert(board != NULL);
     assert(report != NULL);
+    (void)changed;
 
     fprintf(stderr, "gamecube_send\n");
     return JIANGTUN_FALSE;

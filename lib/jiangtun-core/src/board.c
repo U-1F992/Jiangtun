@@ -18,11 +18,12 @@ void jiangtun_board_serial_puts(jiangtun_board_t *board, const char *s) {
 }
 
 jiangtun_bool_t jiangtun_board_gamecube_send(jiangtun_board_t *board,
+                                             jiangtun_bool_t changed,
                                              jiangtun_report_mode3_t *report) {
     assert(board != NULL);
     assert(report != NULL);
 
-    return board->gamecube_send(board, report);
+    return board->gamecube_send(board, changed, report);
 }
 
 void jiangtun_board_led_set(jiangtun_board_t *board, jiangtun_bool_t state) {

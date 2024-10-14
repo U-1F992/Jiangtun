@@ -90,18 +90,19 @@ void jiangtun_init(jiangtun_t *j, jiangtun_board_t *board,
      * https://github.com/mizuyoukanao/Bluewhale/blob/c8413b9aab7248089c9144295796d97794a10c64/examples/WHALE/WHALE.ino#L36-L41
      */
     j->reports[0].start = JIANGTUN_TRUE;
-    handshake_result = jiangtun_board_gamecube_send(j->board, &(j->reports[0]));
-    j->reports[0].start = JIANGTUN_FALSE;
     handshake_result =
-        jiangtun_board_gamecube_send(j->board, &(j->reports[0])) &&
-        handshake_result;
+        jiangtun_board_gamecube_send(j->board, JIANGTUN_TRUE, &(j->reports[0]));
+    j->reports[0].start = JIANGTUN_FALSE;
+    handshake_result = jiangtun_board_gamecube_send(j->board, JIANGTUN_TRUE,
+                                                    &(j->reports[0])) &&
+                       handshake_result;
     if (!handshake_result) {
         serial_log(j, JIANGTUN_LOG_LEVEL_WARN,
                    "handshake failed during initial communications");
     }
 }
 
-static void process_input(jiangtun_t *j) {
+static jiangtun_bool_t process_input(jiangtun_t *j) {
     size_t i = 0;
     jiangtun_uint8_t c = 0;
     jiangtun_bool_t all_rejected = JIANGTUN_TRUE;
@@ -109,7 +110,7 @@ static void process_input(jiangtun_t *j) {
 
     if (j->reset_blocking_loop > 0) {
         serial_log(j, JIANGTUN_LOG_LEVEL_DEBUG, "reset_blocking_loop");
-        return;
+        return JIANGTUN_FALSE;
     }
 
     if (jiangtun_optional_uint8_get(&(j->carry_over), &c)) {
@@ -126,7 +127,7 @@ static void process_input(jiangtun_t *j) {
             init_commands(j);
             j->timeout_loop = JIANGTUN_LOOPS_FOR_TIMEOUT;
         }
-        return;
+        return JIANGTUN_FALSE;
     }
     j->timeout_loop = JIANGTUN_LOOPS_FOR_TIMEOUT;
     jiangtun_optional_uint8_clear(&(j->carry_over));
@@ -158,7 +159,8 @@ static void process_input(jiangtun_t *j) {
                 j->reset_blocking_loop = JIANGTUN_LOOPS_FOR_RESET_BLOCKING;
             }
             init_commands(j);
-            return;
+            return JIANGTUN_TRUE;
+
         } else if (jiangtun_command_pending(j->commands[i])) {
             all_rejected = JIANGTUN_FALSE;
         }
@@ -168,15 +170,17 @@ static void process_input(jiangtun_t *j) {
         serial_log(j, JIANGTUN_LOG_LEVEL_DEBUG, j->buffer);
         jiangtun_optional_uint8_set(&(j->carry_over), c);
         init_commands(j);
-        return;
+        return JIANGTUN_FALSE;
     }
     j->any_pending = JIANGTUN_TRUE;
+    return JIANGTUN_FALSE;
 }
 
 void jiangtun_loop(jiangtun_t *j) {
+    jiangtun_bool_t changed = JIANGTUN_FALSE;
     assert(j != NULL);
 
-    process_input(j);
+    changed = process_input(j);
 
     if (j->reset_blocking_loop > 0 && --(j->reset_blocking_loop) == 0) {
         serial_log(j, JIANGTUN_LOG_LEVEL_DEBUG,
@@ -185,7 +189,7 @@ void jiangtun_loop(jiangtun_t *j) {
     }
     jiangtun_report_emend_axis(j->recently_patched);
 
-    if (!jiangtun_board_gamecube_send(j->board, j->recently_patched)) {
+    if (!jiangtun_board_gamecube_send(j->board, changed, j->recently_patched)) {
         serial_log(j, JIANGTUN_LOG_LEVEL_WARN, "failed to send report");
     }
 
