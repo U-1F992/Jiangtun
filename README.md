@@ -1,12 +1,18 @@
 # Jiangtun (江豚)
 
-GC automation alternative firmware for Raspberry Pi Pico.
+GameCube automation alternative firmware for RP2040.
 
 - [NX Macro Controller](https://blog.bzl-web.com/entry/2020/01/20/165719)
 - [Poke-Controller Modified](https://github.com/Moi-poke/Poke-Controller-Modified)
-- [ORCA GC Controller](https://github.com/yatsuna827/Orca-GC-Controller) (experimental)
+- [ORCA GC Controller](https://github.com/yatsuna827/Orca-GC-Controller)
 
-Use GameCube: `GPIO5`, Servo: `GPIO6`. ([WHALE](https://github.com/mizuyoukanao/Bluewhale) compatible)
+## Pin assignment
+
+| Pico  | XIAO RP2040 |      Function      |
+| :---: | :---------: | :----------------: |
+|   7   |     D5      |   GameCube DATA    |
+|   0   |     D6      |       Servo        |
+|   3   |     D10     | Reset (Active Low) |
 
 ## Button mapping
 
@@ -18,14 +24,14 @@ Use GameCube: `GPIO5`, Servo: `GPIO6`. ([WHALE](https://github.com/mizuyoukanao/
 |       X       |    X     |
 |       L       |    L     |
 |       R       |    R     |
-|      ZL       |  (none)  |
+|      ZL       |          |
 |      ZR       |    Z     |
-|       -       |  (none)  |
+|       -       |          |
 |       +       |  Start   |
-|    L Click    |  (none)  |
-|    R Click    |  (none)  |
+|    L Click    |          |
+|    R Click    |          |
 |     Home      |  Reset   |
-|    Capture    |  (none)  |
+|    Capture    |          |
 
 ## Development
 

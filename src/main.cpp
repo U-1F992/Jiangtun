@@ -1,341 +1,172 @@
 #include <Arduino.h>
 #include <Servo.h>
 
-#include "pico/stdlib.h"
-#include "pico/mutex.h"
-#include "hardware/timer.h"
+#include <Adafruit_NeoPixel.h>
 
-#include "Bluewhale.h"
+#include <Bluewhale.h>
+#include <jiangtun.h>
 
-#include "nxamf.h"
-#include "nxamf/nxmc2.h"
-#include "nxamf/pokecon.h"
+static const pin_size_t PIN_GAMECUBE = 7; // D5 (SCL)
+static const pin_size_t PIN_SERVO = 0;    // D6 (TX)
+static const pin_size_t PIN_RESET = 3;    // D10 (MOSI)
 
-#include "orca.h"
+static const pin_size_t PIN_XIAO_NEOPIXEL = 12;
+static const pin_size_t PIN_XIAO_NEOPIXEL_POWER = 11;
+static const pin_size_t PIN_XIAO_LED_R = 17;
+static const pin_size_t PIN_XIAO_LED_G = 16;
+/**
+ * GPIO25 is connected to the anode of the built-in LED on the Pico (lit
+ * when HIGH), and to the cathode of the blue channel of the RGB LED on the
+ * XIAO RP2040 (lit when LOW).
+ * This firmware prioritizes blinking the LED on the Pico, so on the XIAO
+ * RP2040, the blue LED will remain on and turn off when input is accepted.
+ * As a replacement on the XIAO RP2040, the NeoPixel, which is brighter than
+ * the RGB LED, will light up.
+ */
+static const pin_size_t PIN_XIAO_LED_B_PICO_LED_BUILTIN = 25;
 
-static const int SERIAL_INACTIVE_TIMEOUT = 100;
-static int inactive_count = 0;
-static mutex_t serial1_mutex;
-
-static CGamecubeConsole console(5);
+static CGamecubeConsole gamecube(PIN_GAMECUBE);
 static Servo servo;
-static const int PIN_SERVO = 6;
-static Gamecube_Data_t d = defaultGamecubeData;
-static mutex_t d_mutex;
+static Gamecube_Data_t gamecube_data = defaultGamecubeData;
+static bool gamecube_data_reset = false;
+static mutex_t gamecube_data_mtx;
+static bool current_reset_state = true; // to ensure initial releasing
 
-static Nxmc2Protocol *nxmc2;
-static PokeConProtocol *pokecon;
-static OrcaProtocol *orca;
-static const size_t ORCA_INDEX = 2;
-static NxamfBytesProtocolInterface *protocols[3];
-static NxamfProtocolMultiplexer *mux;
-static NxamfBytesBuffer *buffer;
+static Adafruit_NeoPixel pixels(1, PIN_XIAO_NEOPIXEL, NEO_GRB + NEO_KHZ800);
+static jiangtun_board_t board;
+static jiangtun_t j;
 
-static NxamfButtonState reset_state = NXAMF_BUTTON_STATE_RELEASED;
+static jiangtun_bool_t serial_getc(jiangtun_board_t *board, unsigned char *c) {
+    assert(board != NULL);
+    assert(c != NULL);
 
-static const char *_button_to_string(NxamfButtonState state)
-{
-    switch (state)
-    {
-    case NXAMF_BUTTON_STATE_RELEASED:
-        return "RELEASED";
-    case NXAMF_BUTTON_STATE_PRESSED:
-        return "PRESSED";
-    default:
-        return "[Unknown]";
+    if (Serial.available() <= 0) {
+        return JIANGTUN_FALSE;
     }
-}
-
-static const char *_hat_to_string(NxamfHatState state)
-{
-    switch (state)
-    {
-    case NXAMF_HAT_STATE_UP:
-        return "UP";
-    case NXAMF_HAT_STATE_UPRIGHT:
-        return "UPRIGHT";
-    case NXAMF_HAT_STATE_RIGHT:
-        return "RIGHT";
-    case NXAMF_HAT_STATE_DOWNRIGHT:
-        return "DOWNRIGHT";
-    case NXAMF_HAT_STATE_DOWN:
-        return "DOWN";
-    case NXAMF_HAT_STATE_DOWNLEFT:
-        return "DOWNLEFT";
-    case NXAMF_HAT_STATE_LEFT:
-        return "LEFT";
-    case NXAMF_HAT_STATE_UPLEFT:
-        return "UPLEFT";
-    case NXAMF_HAT_STATE_NEUTRAL:
-        return "NEUTRAL";
-    default:
-        return "[Unknown]";
+    int c_ = Serial.read();
+    if (c_ < 0 || 255 < c_) {
+        return JIANGTUN_FALSE;
     }
+    *c = c_ & 0xFF;
+    return JIANGTUN_TRUE;
 }
 
-static char _format_state_buffer[1024];
-static char *format_state(const NxamfGamepadState *state)
-{
-    snprintf(_format_state_buffer, 1024,
-             "Gamepad State:\n"
-             "  Y: %s\t"
-             "B: %s\t"
-             "A: %s\t"
-             "X: %s\n"
-             "  L: %s\t"
-             "R: %s\t"
-             "ZL: %s\t"
-             "ZR: %s\n"
-             "  Minus: %s\t"
-             "Plus: %s\t"
-             "L Click: %s\t"
-             "R Click: %s\n"
-             "  Home: %s\t"
-             "Capture: %s\n"
-             "  Hat: %s\n"
-             "  Left Stick: (x=%u, y=%u)\n"
-             "  Right Stick: (x=%u, y=%u)\n",
-             _button_to_string(state->y), _button_to_string(state->b),
-             _button_to_string(state->a), _button_to_string(state->x),
-             _button_to_string(state->l), _button_to_string(state->r),
-             _button_to_string(state->zl), _button_to_string(state->zr),
-             _button_to_string(state->minus), _button_to_string(state->plus),
-             _button_to_string(state->l_click), _button_to_string(state->r_click),
-             _button_to_string(state->home), _button_to_string(state->capture),
-             _hat_to_string(state->hat),
-             state->l_stick.x, state->l_stick.y, state->r_stick.x, state->r_stick.y);
+static void serial_puts(jiangtun_board_t *board, const char *s) {
+    assert(board != NULL);
+    assert(s != NULL);
 
-    return _format_state_buffer;
+    Serial.print(s);
 }
 
-static int64_t led_off(alarm_id_t id, void *user_data)
-{
-    digitalWrite(LED_BUILTIN, LOW);
-    return false;
-}
+static jiangtun_bool_t gamecube_send(jiangtun_board_t *board,
+                                     jiangtun_bool_t changed,
+                                     jiangtun_report_mode3_t *report) {
+    assert(board != NULL);
+    assert(report != NULL);
 
-static void async_led_on_for_100ms()
-{
-    digitalWrite(LED_BUILTIN, HIGH);
-    alarm_id_t alarm_id = add_alarm_in_ms(100, led_off, NULL, false);
-}
+    if (changed) {
+        mutex_enter_blocking(&gamecube_data_mtx);
+        gamecube_data.report.a = report->a ? 1 : 0;
+        gamecube_data.report.b = report->b ? 1 : 0;
+        gamecube_data.report.x = report->x ? 1 : 0;
+        gamecube_data.report.y = report->y ? 1 : 0;
+        gamecube_data.report.start = report->start ? 1 : 0;
+        gamecube_data.report.dleft = report->dleft ? 1 : 0;
+        gamecube_data.report.dright = report->dright ? 1 : 0;
+        gamecube_data.report.ddown = report->ddown ? 1 : 0;
+        gamecube_data.report.dup = report->dup ? 1 : 0;
+        gamecube_data.report.z = report->z ? 1 : 0;
+        gamecube_data.report.r = report->r ? 1 : 0;
+        gamecube_data.report.l = report->l ? 1 : 0;
+        gamecube_data.report.xAxis = (uint8_t)report->xAxis;
+        gamecube_data.report.yAxis = (uint8_t)report->yAxis;
+        gamecube_data.report.cxAxis = (uint8_t)report->cxAxis;
+        gamecube_data.report.cyAxis = (uint8_t)report->cyAxis;
+        gamecube_data.report.left = (uint8_t)report->left;
+        gamecube_data.report.right = (uint8_t)report->right;
 
-static void reflect_state(NxamfGamepadState *state)
-{
-    if (state == NULL)
-    {
-        return;
+        gamecube_data_reset = report->reset ? true : false;
+        mutex_exit(&gamecube_data_mtx);
     }
 
-    async_led_on_for_100ms();
-
-    mutex_enter_blocking(&d_mutex);
-
-    d.report.y = (uint8_t)state->y;
-    d.report.b = (uint8_t)state->b;
-    d.report.a = (uint8_t)state->a;
-    d.report.x = (uint8_t)state->x;
-    d.report.l = (uint8_t)state->l;
-    d.report.r = (uint8_t)state->r;
-    d.report.z = (uint8_t)state->zr;
-    d.report.start = (uint8_t)state->plus;
-    if (reset_state != state->home)
-    {
-        servo.write(state->home == NXAMF_BUTTON_STATE_PRESSED ? 65 : 90);
-        reset_state = state->home;
-
-        // ORCAのサーボモータ使用はブロッキング処理
-        if (mux->ready_index == ORCA_INDEX)
-        {
-            delay(500);
-            servo.write(90);
-            delay(500);
-            reset_state = NXAMF_BUTTON_STATE_RELEASED;
-        }
-    }
-
-    switch (state->hat)
-    {
-    case NXAMF_HAT_STATE_UP:
-        d.report.dup = 1;
-        d.report.dright = 0;
-        d.report.ddown = 0;
-        d.report.dleft = 0;
-        break;
-    case NXAMF_HAT_STATE_UPRIGHT:
-        d.report.dup = 1;
-        d.report.dright = 1;
-        d.report.ddown = 0;
-        d.report.dleft = 0;
-        break;
-    case NXAMF_HAT_STATE_RIGHT:
-        d.report.dup = 0;
-        d.report.dright = 1;
-        d.report.ddown = 0;
-        d.report.dleft = 0;
-        break;
-    case NXAMF_HAT_STATE_DOWNRIGHT:
-        d.report.dup = 0;
-        d.report.dright = 1;
-        d.report.ddown = 1;
-        d.report.dleft = 0;
-        break;
-    case NXAMF_HAT_STATE_DOWN:
-        d.report.dup = 0;
-        d.report.dright = 0;
-        d.report.ddown = 1;
-        d.report.dleft = 0;
-        break;
-    case NXAMF_HAT_STATE_DOWNLEFT:
-        d.report.dup = 0;
-        d.report.dright = 0;
-        d.report.ddown = 1;
-        d.report.dleft = 1;
-        break;
-    case NXAMF_HAT_STATE_LEFT:
-        d.report.dup = 0;
-        d.report.dright = 0;
-        d.report.ddown = 0;
-        d.report.dleft = 1;
-        break;
-    case NXAMF_HAT_STATE_UPLEFT:
-        d.report.dup = 1;
-        d.report.dright = 0;
-        d.report.ddown = 0;
-        d.report.dleft = 1;
-        break;
-    case NXAMF_HAT_STATE_NEUTRAL:
-    default:
-        d.report.dup = 0;
-        d.report.dright = 0;
-        d.report.ddown = 0;
-        d.report.dleft = 0;
-        break;
-    }
-
-    d.report.xAxis = state->l_stick.x;
-    // There are a few games that do not handle yAxis=0 correctly.
-    uint8_t y_axis = 0xFF - state->l_stick.y;
-    d.report.yAxis = y_axis == 0 ? 1 : y_axis;
-
-    d.report.cxAxis = state->r_stick.x;
-    // There are a few games that do not handle cyAxis=0 correctly.
-    uint8_t cy_axis = 0xFF - state->r_stick.y;
-    d.report.cyAxis = cy_axis == 0 ? 1 : cy_axis;
-
-    mutex_exit(&d_mutex);
+    return JIANGTUN_TRUE;
 }
 
-void setup()
-{
-    Serial.begin(9600);
+static void led_set(jiangtun_board_t *board, jiangtun_bool_t state) {
+    assert(board != NULL);
 
+    digitalWrite(PIN_XIAO_LED_B_PICO_LED_BUILTIN, state ? HIGH : LOW);
+    if (state) {
+        uint16_t hue = (millis() % 2000) * (65535 / 2000);
+        pixels.setPixelColor(0, Adafruit_NeoPixel::ColorHSV(hue));
+    } else {
+        pixels.clear();
+    }
+    pixels.show();
+}
+
+static jiangtun_uint32_t get_millis(jiangtun_board_t *board) {
+    assert(board != NULL);
+
+    return (jiangtun_uint32_t)(millis() % JIANGTUN_UINT32_MAX);
+}
+
+void setup() {
+    Serial.begin(115200);
+
+    pinMode(PIN_XIAO_LED_R, OUTPUT);
+    pinMode(PIN_XIAO_LED_G, OUTPUT);
+    digitalWrite(PIN_XIAO_LED_R, HIGH);
+    digitalWrite(PIN_XIAO_LED_G, HIGH);
+
+    pinMode(PIN_XIAO_LED_B_PICO_LED_BUILTIN, OUTPUT);
+    digitalWrite(PIN_XIAO_LED_B_PICO_LED_BUILTIN, LOW);
+
+    pinMode(PIN_XIAO_NEOPIXEL_POWER, OUTPUT);
+    digitalWrite(PIN_XIAO_NEOPIXEL_POWER, HIGH);
+    pixels.begin();
+    pixels.clear();
+    pixels.show();
+
+    jiangtun_board_init(&board, serial_getc, serial_puts, gamecube_send,
+                        led_set, get_millis);
+    mutex_init(&gamecube_data_mtx);
+    jiangtun_init(
+        &j, &board,
+        JIANGTUN_FEATURE_ENABLE_LED_BLINK | JIANGTUN_FEATURE_ENABLE_NXMC2 |
+            JIANGTUN_FEATURE_ENABLE_POKECON | JIANGTUN_FEATURE_ENABLE_ORCA,
 #ifndef NDEBUG
-    mutex_init(&serial1_mutex);
-    mutex_enter_blocking(&serial1_mutex);
-    Serial1.setTX(0);
-    Serial1.setRX(1);
-    Serial1.begin();
-    mutex_exit(&serial1_mutex);
-#define debug_println(msg)              \
-    mutex_enter_blocking(&serial1_mutex); \
-    Serial1.println(msg);                 \
-    mutex_exit(&serial1_mutex);
+        JIANGTUN_LOG_LEVEL_DEBUG
 #else
-#define debug_println(msg) ((void)0)
+        JIANGTUN_LOG_LEVEL_INFO
 #endif
+    );
+}
 
-    // Setup for SG90
+void loop() { jiangtun_loop(&j); }
+
+void setup1() {
     servo.attach(PIN_SERVO, 500, 2400);
-
-    mutex_init(&d_mutex);
-    mutex_enter_blocking(&d_mutex);
-    d.report.a = 0;
-    d.report.b = 0;
-    d.report.x = 0;
-    d.report.y = 0;
-    d.report.start = 0;
-    d.report.dleft = 0;
-    d.report.dright = 0;
-    d.report.ddown = 0;
-    d.report.dup = 0;
-    d.report.z = 0;
-    d.report.r = 0;
-    d.report.l = 0;
-    d.report.xAxis = 128;
-    d.report.yAxis = 128;
-    d.report.cxAxis = 128;
-    d.report.cyAxis = 128;
-    d.report.left = 0;
-    d.report.right = 0;
-
-    // Omajinai to recognize the controller
-    d.report.start = 1;
-    console.write(d);
-    d.report.start = 0;
-    console.write(d);
-    mutex_exit(&d_mutex);
-
-    nxmc2 = nxmc2_protocol_new();
-    pokecon = pokecon_protocol_new();
-    orca = orca_protocol_new();
-    protocols[0] = (NxamfBytesProtocolInterface *)nxmc2;
-    protocols[1] = (NxamfBytesProtocolInterface *)pokecon;
-    protocols[2] = (NxamfBytesProtocolInterface *)orca;
-    mux = nxamf_protocol_multiplexer_new(protocols, 3);
-    buffer = nxamf_bytes_buffer_new((NxamfBytesProtocolInterface *)mux);
-    assert(
-        nxmc2 != NULL &&
-        pokecon != NULL &&
-        orca != NULL &&
-        mux != NULL &&
-        buffer != NULL);
-
-    pinMode(LED_BUILTIN, OUTPUT);
-    digitalWrite(LED_BUILTIN, LOW);
+    while (!mutex_is_initialized(&gamecube_data_mtx))
+        ;
 }
 
-void loop()
-{
-    if (Serial.available() == 0)
-    {
-        inactive_count++;
-        if (SERIAL_INACTIVE_TIMEOUT < inactive_count)
-        {
-            inactive_count = 0;
-            nxamf_bytes_buffer_clear(buffer);
-        }
-        return;
-    }
-    inactive_count = 0;
-
-    uint8_t packet = Serial.read();
-    debug_println(packet);
-    NxamfGamepadState *state = nxamf_bytes_buffer_append(buffer, packet);
-    if (state == NULL)
-    {
-        return;
+void loop1() {
+    mutex_enter_blocking(&gamecube_data_mtx);
+    bool ret = gamecube.write(gamecube_data);
+    bool reset = gamecube_data_reset;
+    mutex_exit(&gamecube_data_mtx);
+    if (!ret) {
+        Serial.println("[core2]\tfailed to send report");
     }
 
-    debug_println(format_state(state));
-    reflect_state(state);
-
-    nxamf_gamepad_state_delete(state);
-    state = NULL;
-}
-
-void setup1()
-{
-}
-
-void loop1()
-{
-    mutex_enter_blocking(&d_mutex);
-    bool ret = console.write(d);
-    mutex_exit(&d_mutex);
-
-    if (!ret)
-    {
-        debug_println("GC is not powered on or not connected.");
+    if (!(current_reset_state) && reset) {
+        servo.write(65);
+        pinMode(PIN_RESET, OUTPUT);
+        digitalWrite(PIN_RESET, LOW);
+    } else if (current_reset_state && !reset) {
+        servo.write(90);
+        pinMode(PIN_RESET, INPUT);
     }
+    current_reset_state = reset;
 }
