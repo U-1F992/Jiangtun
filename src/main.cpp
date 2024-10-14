@@ -62,32 +62,35 @@ static void jiangtun_board_rp2040_serial_puts(jiangtun_board_t *board,
 
 static jiangtun_bool_t
 jiangtun_board_rp2040_gamecube_send(jiangtun_board_t *board,
+                                    jiangtun_bool_t changed,
                                     jiangtun_report_mode3_t *report) {
     assert(board != NULL);
     assert(report != NULL);
 
-    mutex_enter_blocking(&gamecube_data_mtx);
-    gamecube_data.report.a = report->a ? 1 : 0;
-    gamecube_data.report.b = report->b ? 1 : 0;
-    gamecube_data.report.x = report->x ? 1 : 0;
-    gamecube_data.report.y = report->y ? 1 : 0;
-    gamecube_data.report.start = report->start ? 1 : 0;
-    gamecube_data.report.dleft = report->dleft ? 1 : 0;
-    gamecube_data.report.dright = report->dright ? 1 : 0;
-    gamecube_data.report.ddown = report->ddown ? 1 : 0;
-    gamecube_data.report.dup = report->dup ? 1 : 0;
-    gamecube_data.report.z = report->z ? 1 : 0;
-    gamecube_data.report.r = report->r ? 1 : 0;
-    gamecube_data.report.l = report->l ? 1 : 0;
-    gamecube_data.report.xAxis = (uint8_t)report->xAxis;
-    gamecube_data.report.yAxis = (uint8_t)report->yAxis;
-    gamecube_data.report.cxAxis = (uint8_t)report->cxAxis;
-    gamecube_data.report.cyAxis = (uint8_t)report->cyAxis;
-    gamecube_data.report.left = (uint8_t)report->left;
-    gamecube_data.report.right = (uint8_t)report->right;
+    if (changed) {
+        mutex_enter_blocking(&gamecube_data_mtx);
+        gamecube_data.report.a = report->a ? 1 : 0;
+        gamecube_data.report.b = report->b ? 1 : 0;
+        gamecube_data.report.x = report->x ? 1 : 0;
+        gamecube_data.report.y = report->y ? 1 : 0;
+        gamecube_data.report.start = report->start ? 1 : 0;
+        gamecube_data.report.dleft = report->dleft ? 1 : 0;
+        gamecube_data.report.dright = report->dright ? 1 : 0;
+        gamecube_data.report.ddown = report->ddown ? 1 : 0;
+        gamecube_data.report.dup = report->dup ? 1 : 0;
+        gamecube_data.report.z = report->z ? 1 : 0;
+        gamecube_data.report.r = report->r ? 1 : 0;
+        gamecube_data.report.l = report->l ? 1 : 0;
+        gamecube_data.report.xAxis = (uint8_t)report->xAxis;
+        gamecube_data.report.yAxis = (uint8_t)report->yAxis;
+        gamecube_data.report.cxAxis = (uint8_t)report->cxAxis;
+        gamecube_data.report.cyAxis = (uint8_t)report->cyAxis;
+        gamecube_data.report.left = (uint8_t)report->left;
+        gamecube_data.report.right = (uint8_t)report->right;
 
-    gamecube_data_reset = report->reset ? true : false;
-    mutex_exit(&gamecube_data_mtx);
+        gamecube_data_reset = report->reset ? true : false;
+        mutex_exit(&gamecube_data_mtx);
+    }
 
     return JIANGTUN_TRUE;
 }
