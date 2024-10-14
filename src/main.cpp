@@ -29,6 +29,7 @@ static CGamecubeConsole gamecube(PIN_GAMECUBE);
 static Servo servo;
 static Gamecube_Data_t gamecube_data = defaultGamecubeData;
 static bool gamecube_data_reset = false;
+static mutex_t gamecube_data_mtx;
 static bool current_reset_state = true; // to ensure initial releasing
 
 static Adafruit_NeoPixel pixels(1, PIN_XIAO_NEOPIXEL, NEO_GRB + NEO_KHZ800);
@@ -64,6 +65,7 @@ static jiangtun_bool_t gamecube_send(jiangtun_board_t *board,
     assert(report != NULL);
 
     if (changed) {
+        mutex_enter_blocking(&gamecube_data_mtx);
         gamecube_data.report.a = report->a ? 1 : 0;
         gamecube_data.report.b = report->b ? 1 : 0;
         gamecube_data.report.x = report->x ? 1 : 0;
@@ -84,19 +86,8 @@ static jiangtun_bool_t gamecube_send(jiangtun_board_t *board,
         gamecube_data.report.right = (uint8_t)report->right;
 
         gamecube_data_reset = report->reset ? true : false;
+        mutex_exit(&gamecube_data_mtx);
     }
-
-    bool ret = gamecube.write(gamecube_data);
-
-    if (!(current_reset_state) && gamecube_data_reset) {
-        servo.write(65);
-        pinMode(PIN_RESET, OUTPUT);
-        digitalWrite(PIN_RESET, LOW);
-    } else if (current_reset_state && !gamecube_data_reset) {
-        servo.write(90);
-        pinMode(PIN_RESET, INPUT);
-    }
-    current_reset_state = gamecube_data_reset;
 
     return JIANGTUN_TRUE;
 }
@@ -123,8 +114,6 @@ static jiangtun_uint32_t get_millis(jiangtun_board_t *board) {
 void setup() {
     Serial.begin(115200);
 
-    servo.attach(PIN_SERVO, 500, 2400);
-
     pinMode(PIN_XIAO_LED_R, OUTPUT);
     pinMode(PIN_XIAO_LED_G, OUTPUT);
     digitalWrite(PIN_XIAO_LED_R, HIGH);
@@ -141,6 +130,7 @@ void setup() {
 
     jiangtun_board_init(&board, serial_getc, serial_puts, gamecube_send,
                         led_set, get_millis);
+    mutex_init(&gamecube_data_mtx);
     jiangtun_init(
         &j, &board,
         JIANGTUN_FEATURE_ENABLE_LED_BLINK | JIANGTUN_FEATURE_ENABLE_NXMC2 |
@@ -154,3 +144,29 @@ void setup() {
 }
 
 void loop() { jiangtun_loop(&j); }
+
+void setup1() {
+    servo.attach(PIN_SERVO, 500, 2400);
+    while (!mutex_is_initialized(&gamecube_data_mtx))
+        ;
+}
+
+void loop1() {
+    mutex_enter_blocking(&gamecube_data_mtx);
+    bool ret = gamecube.write(gamecube_data);
+    bool reset = gamecube_data_reset;
+    mutex_exit(&gamecube_data_mtx);
+    if (!ret) {
+        Serial.println("[core2]\tfailed to send report");
+    }
+
+    if (!(current_reset_state) && reset) {
+        servo.write(65);
+        pinMode(PIN_RESET, OUTPUT);
+        digitalWrite(PIN_RESET, LOW);
+    } else if (current_reset_state && !reset) {
+        servo.write(90);
+        pinMode(PIN_RESET, INPUT);
+    }
+    current_reset_state = reset;
+}
