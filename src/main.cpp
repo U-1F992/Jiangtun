@@ -16,7 +16,7 @@ static const pin_size_t PIN_XIAO_LED_R = 17;
 static const pin_size_t PIN_XIAO_LED_G = 16;
 /**
  * GPIO25 is connected to the anode of the built-in LED on the Pico (lit
- * when HIGH),　and to the cathode of the blue channel of the RGB LED on the
+ * when HIGH), and to the cathode of the blue channel of the RGB LED on the
  * XIAO RP2040 (lit when LOW).
  * This firmware prioritizes blinking the LED on the Pico, so on the XIAO
  * RP2040, the blue LED will remain on and turn off when input is accepted.
@@ -124,10 +124,8 @@ void setup() {
 
     pinMode(PIN_XIAO_LED_R, OUTPUT);
     pinMode(PIN_XIAO_LED_G, OUTPUT);
-    // pinMode(PIN_XIAO_LED_B_PICO_LED_BUILTIN, OUTPUT);
     digitalWrite(PIN_XIAO_LED_R, HIGH);
     digitalWrite(PIN_XIAO_LED_G, HIGH);
-    // digitalWrite(PIN_XIAO_LED_B_PICO_LED_BUILTIN, HIGH);
 
     pinMode(PIN_XIAO_LED_B_PICO_LED_BUILTIN, OUTPUT);
     digitalWrite(PIN_XIAO_LED_B_PICO_LED_BUILTIN, LOW);
