@@ -11,14 +11,9 @@
 extern "C" {
 #endif
 
-#ifndef JIANGTUN_MICROSECONDS_PER_LOOP
-#define JIANGTUN_MICROSECONDS_PER_LOOP 925
-#endif
-#define JIANGTUN_LOOPS_FOR_MILLISECONDS(ms)                                    \
-    ((jiangtun_uint32_t)((ms) * 1000 / JIANGTUN_MICROSECONDS_PER_LOOP) + 1)
-#define JIANGTUN_LOOPS_FOR_TIMEOUT JIANGTUN_LOOPS_FOR_MILLISECONDS(5)
-#define JIANGTUN_LOOPS_FOR_LED JIANGTUN_LOOPS_FOR_MILLISECONDS(100)
-#define JIANGTUN_LOOPS_FOR_RESET_BLOCKING JIANGTUN_LOOPS_FOR_MILLISECONDS(500)
+#define JIANGTUN_LOOPS_FOR_TIMEOUT 5
+#define JIANGTUN_LED_ON_MILLIS 100
+#define JIANGTUN_RESET_BLOCKING_MILLIS 500
 
 typedef jiangtun_uint32_t jiangtun_feature_flag_t;
 #define JIANGTUN_FEATURE_ENABLE_LED_BLINK ((jiangtun_feature_flag_t)(1 << 4))
@@ -27,20 +22,6 @@ typedef jiangtun_uint32_t jiangtun_feature_flag_t;
 #define JIANGTUN_FEATURE_ENABLE_ORCA ((jiangtun_feature_flag_t)(1 << 1))
 #define JIANGTUN_FEATURE_ENABLE_DOL ((jiangtun_feature_flag_t)(1 << 0))
 
-/**
- * Compared to the levels commonly provided by high-functionality logging
- * libraries, such as "FATAL, ERROR, WARN, INFO, DEBUG, TRACE," the logging
- * levels provided here are limited.
- * First, Jiangtun does not have a path that leads to FATAL. More precisely,
- * there is no way to detect when such a condition occurs. Even if there were a
- * way to detect it, in situations where we would want to output a FATAL or
- * ERROR log from the firmware, the system is likely already in a state where
- * halting cannot be avoided, and it's hard to imagine that output resources
- * could be secured at that point.
- * Additionally, this library is small-scale enough that during debugging, we
- * always want information equivalent to TRACE. There's no need to differentiate
- * between DEBUG and TRACE.
- */
 typedef enum jiangtun_log_level_t {
     JIANGTUN_LOG_LEVEL_WARN,
     JIANGTUN_LOG_LEVEL_INFO,
@@ -65,8 +46,9 @@ typedef struct jiangtun_t {
     jiangtun_optional_uint8_t carry_over;
 
     jiangtun_uint32_t timeout_loop;
-    jiangtun_uint32_t led_loop;
-    jiangtun_uint32_t reset_blocking_loop;
+
+    jiangtun_optional_uint32_t led_on_start_time;
+    jiangtun_optional_uint32_t reset_blocking_start_time;
 
     jiangtun_log_level_t log_level;
 

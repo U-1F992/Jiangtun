@@ -82,8 +82,8 @@ void jiangtun_init(jiangtun_t *j, jiangtun_board_t *board,
     j->any_pending = JIANGTUN_FALSE;
     jiangtun_optional_uint8_clear(&(j->carry_over));
     j->timeout_loop = JIANGTUN_LOOPS_FOR_TIMEOUT;
-    j->led_loop = 0;
-    j->reset_blocking_loop = 0;
+    jiangtun_optional_uint32_clear(&(j->led_on_start_time));
+    jiangtun_optional_uint32_clear(&(j->reset_blocking_start_time));
     j->log_level = log_level;
 
     /*
@@ -102,15 +102,26 @@ void jiangtun_init(jiangtun_t *j, jiangtun_board_t *board,
     }
 }
 
-static jiangtun_bool_t process_input(jiangtun_t *j) {
+static jiangtun_bool_t process_input(jiangtun_t *j,
+                                     jiangtun_uint32_t current_millis) {
     size_t i = 0;
+    jiangtun_uint32_t reset_blocking_start_time = 0;
     jiangtun_uint8_t c = 0;
     jiangtun_bool_t all_rejected = JIANGTUN_TRUE;
     assert(j != NULL);
 
-    if (j->reset_blocking_loop > 0) {
-        serial_log(j, JIANGTUN_LOG_LEVEL_DEBUG, "reset_blocking_loop");
-        return JIANGTUN_FALSE;
+    if (jiangtun_optional_uint32_get(&(j->reset_blocking_start_time),
+                                     &reset_blocking_start_time)) {
+        if (current_millis - reset_blocking_start_time <
+            JIANGTUN_RESET_BLOCKING_MILLIS) {
+            serial_log(j, JIANGTUN_LOG_LEVEL_DEBUG, "reset_blocking");
+            return JIANGTUN_FALSE;
+        } else {
+            serial_log(j, JIANGTUN_LOG_LEVEL_DEBUG, "reset_blocking completed");
+            j->recently_patched->reset = JIANGTUN_FALSE;
+            jiangtun_optional_uint32_clear(&(j->reset_blocking_start_time));
+            return JIANGTUN_TRUE;
+        }
     }
 
     if (jiangtun_optional_uint8_get(&(j->carry_over), &c)) {
@@ -151,12 +162,13 @@ static jiangtun_bool_t process_input(jiangtun_t *j) {
 
             jiangtun_board_led_set(
                 j->board, j->features & JIANGTUN_FEATURE_ENABLE_LED_BLINK);
-            j->led_loop += JIANGTUN_LOOPS_FOR_LED;
+            jiangtun_optional_uint32_set(&(j->led_on_start_time),
+                                         current_millis);
 
             if (!j->any_pending && c == '@') {
-                serial_log(j, JIANGTUN_LOG_LEVEL_DEBUG,
-                           "'@' received, initiating reset_blocking_loop");
-                j->reset_blocking_loop = JIANGTUN_LOOPS_FOR_RESET_BLOCKING;
+                serial_log(j, JIANGTUN_LOG_LEVEL_DEBUG, "'@' received");
+                jiangtun_optional_uint32_set(&(j->reset_blocking_start_time),
+                                             current_millis);
             }
             init_commands(j);
             return JIANGTUN_TRUE;
@@ -178,23 +190,23 @@ static jiangtun_bool_t process_input(jiangtun_t *j) {
 
 void jiangtun_loop(jiangtun_t *j) {
     jiangtun_bool_t changed = JIANGTUN_FALSE;
+    jiangtun_uint32_t current_millis = jiangtun_board_get_millis(j->board);
+    jiangtun_uint32_t led_on_start_time = 0;
     assert(j != NULL);
 
-    changed = process_input(j);
-
-    if (j->reset_blocking_loop > 0 && --(j->reset_blocking_loop) == 0) {
-        serial_log(j, JIANGTUN_LOG_LEVEL_DEBUG,
-                   "reset_blocking_loop completed");
-        j->recently_patched->reset = JIANGTUN_FALSE;
+    if ((changed = process_input(j, current_millis))) {
+        jiangtun_report_emend_axis(j->recently_patched);
     }
-    jiangtun_report_emend_axis(j->recently_patched);
 
     if (!jiangtun_board_gamecube_send(j->board, changed, j->recently_patched)) {
         serial_log(j, JIANGTUN_LOG_LEVEL_WARN, "failed to send report");
     }
 
-    if (j->led_loop > 0 && --(j->led_loop) == 0) {
-        serial_log(j, JIANGTUN_LOG_LEVEL_DEBUG, "led_loop completed");
+    if (jiangtun_optional_uint32_get(&(j->led_on_start_time),
+                                     &led_on_start_time) &&
+        current_millis - led_on_start_time >= JIANGTUN_LED_ON_MILLIS) {
+        serial_log(j, JIANGTUN_LOG_LEVEL_DEBUG, "led_on completed");
         jiangtun_board_led_set(j->board, JIANGTUN_FALSE);
+        jiangtun_optional_uint32_clear(&(j->led_on_start_time));
     }
 }

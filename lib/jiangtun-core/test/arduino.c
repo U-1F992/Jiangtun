@@ -37,6 +37,12 @@ static void led_set(jiangtun_board_t *board, jiangtun_bool_t state) {
     fprintf(stderr, "led_set: %u\n", state);
 }
 
+static jiangtun_uint32_t get_millis(jiangtun_board_t *board) {
+    assert(board != NULL);
+
+    return 0;
+}
+
 int main(void) {
     size_t i = 0;
     jiangtun_t j;
@@ -46,7 +52,7 @@ int main(void) {
         JIANGTUN_FEATURE_ENABLE_POKECON | JIANGTUN_FEATURE_ENABLE_ORCA;
 
     jiangtun_board_init(&board, serial_getc, serial_puts, gamecube_send,
-                        led_set);
+                        led_set, get_millis);
     jiangtun_init(&j, &board, features, JIANGTUN_LOG_LEVEL_DEBUG);
 
     for (i = 0; i < 5; i++) {

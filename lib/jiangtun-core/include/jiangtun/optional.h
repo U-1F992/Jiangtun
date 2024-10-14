@@ -17,6 +17,17 @@ jiangtun_bool_t jiangtun_optional_uint8_get(jiangtun_optional_uint8_t *,
                                             jiangtun_uint8_t *);
 void jiangtun_optional_uint8_clear(jiangtun_optional_uint8_t *);
 
+typedef struct jiangtun_optional_uint32_t {
+    jiangtun_uint32_t value;
+    jiangtun_uint32_t *pointer;
+} jiangtun_optional_uint32_t;
+
+void jiangtun_optional_uint32_set(jiangtun_optional_uint32_t *,
+                                  jiangtun_uint32_t);
+jiangtun_bool_t jiangtun_optional_uint32_get(jiangtun_optional_uint32_t *,
+                                             jiangtun_uint32_t *);
+void jiangtun_optional_uint32_clear(jiangtun_optional_uint32_t *);
+
 #ifdef __cplusplus
 }
 #endif

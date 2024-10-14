@@ -36,8 +36,7 @@ static Adafruit_NeoPixel pixels(1, PIN_XIAO_NEOPIXEL, NEO_GRB + NEO_KHZ800);
 static jiangtun_board_t board;
 static jiangtun_t j;
 
-static jiangtun_bool_t
-jiangtun_board_rp2040_serial_getc(jiangtun_board_t *board, unsigned char *c) {
+static jiangtun_bool_t serial_getc(jiangtun_board_t *board, unsigned char *c) {
     assert(board != NULL);
     assert(c != NULL);
 
@@ -52,18 +51,16 @@ jiangtun_board_rp2040_serial_getc(jiangtun_board_t *board, unsigned char *c) {
     return JIANGTUN_TRUE;
 }
 
-static void jiangtun_board_rp2040_serial_puts(jiangtun_board_t *board,
-                                              const char *s) {
+static void serial_puts(jiangtun_board_t *board, const char *s) {
     assert(board != NULL);
     assert(s != NULL);
 
     Serial.print(s);
 }
 
-static jiangtun_bool_t
-jiangtun_board_rp2040_gamecube_send(jiangtun_board_t *board,
-                                    jiangtun_bool_t changed,
-                                    jiangtun_report_mode3_t *report) {
+static jiangtun_bool_t gamecube_send(jiangtun_board_t *board,
+                                     jiangtun_bool_t changed,
+                                     jiangtun_report_mode3_t *report) {
     assert(board != NULL);
     assert(report != NULL);
 
@@ -95,8 +92,7 @@ jiangtun_board_rp2040_gamecube_send(jiangtun_board_t *board,
     return JIANGTUN_TRUE;
 }
 
-static void jiangtun_board_rp2040_led_set(jiangtun_board_t *board,
-                                          jiangtun_bool_t state) {
+static void led_set(jiangtun_board_t *board, jiangtun_bool_t state) {
     assert(board != NULL);
 
     digitalWrite(PIN_XIAO_LED_B_PICO_LED_BUILTIN, state ? HIGH : LOW);
@@ -107,19 +103,12 @@ static void jiangtun_board_rp2040_led_set(jiangtun_board_t *board,
         pixels.clear();
     }
     pixels.show();
+}
 
-    /**
-     * Calibrate `JIANGTUN_MICROSECONDS_PER_LOOP`
-     * to make this duration approximately 100 ms.
-     */
-    // static unsigned long led_on = 0;
-    // if (state) {
-    //     led_on = micros();
-    // } else {
-    //     char buffer[128];
-    //     sprintf(buffer, "led_on duration: %lu\n", micros() - led_on);
-    //     Serial.print(buffer);
-    // }
+static jiangtun_uint32_t get_millis(jiangtun_board_t *board) {
+    assert(board != NULL);
+
+    return (jiangtun_uint32_t)(millis() % JIANGTUN_UINT32_MAX);
 }
 
 void setup() {
@@ -139,10 +128,8 @@ void setup() {
     pixels.clear();
     pixels.show();
 
-    jiangtun_board_init(&board, jiangtun_board_rp2040_serial_getc,
-                        jiangtun_board_rp2040_serial_puts,
-                        jiangtun_board_rp2040_gamecube_send,
-                        jiangtun_board_rp2040_led_set);
+    jiangtun_board_init(&board, serial_getc, serial_puts, gamecube_send,
+                        led_set, get_millis);
     mutex_init(&gamecube_data_mtx);
     jiangtun_init(
         &j, &board,
@@ -172,6 +159,7 @@ void loop1() {
     if (!ret) {
         Serial.println("[core2]\tfailed to send report");
     }
+
     if (!(current_reset_state) && reset) {
         servo.write(65);
         pinMode(PIN_RESET, OUTPUT);
