@@ -155,9 +155,6 @@ static jiangtun_bool_t process_input(jiangtun_t *j,
                 /* as rejected */
                 continue;
             }
-            sprintf(j->buffer, "command #%lu executed successfully",
-                    (unsigned long)i);
-            serial_log(j, JIANGTUN_LOG_LEVEL_INFO, j->buffer);
             j->recently_patched = &(j->reports[i]);
 
             jiangtun_board_led_set(
