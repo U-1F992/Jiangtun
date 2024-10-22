@@ -31,6 +31,8 @@ static Gamecube_Data_t gamecube_data = defaultGamecubeData;
 static bool gamecube_data_reset = false;
 static mutex_t gamecube_data_mtx;
 static bool current_reset_state = true; // to ensure initial releasing
+static bool write_at_least_once = false;
+static mutex_t write_at_least_once_mtx;
 
 static Adafruit_NeoPixel pixels(1, PIN_XIAO_NEOPIXEL, NEO_GRB + NEO_KHZ800);
 static jiangtun_board_t board;
@@ -64,6 +66,16 @@ static jiangtun_bool_t gamecube_send(jiangtun_board_t *board,
     assert(board != NULL);
     assert(report != NULL);
 
+    bool is_initialized = mutex_is_initialized(&write_at_least_once_mtx);
+    if (is_initialized) {
+        bool _write_at_least_once;
+        do {
+            mutex_enter_blocking(&write_at_least_once_mtx);
+            _write_at_least_once = write_at_least_once;
+            mutex_exit(&write_at_least_once_mtx);
+        } while (!_write_at_least_once);
+    }
+
     if (changed) {
         mutex_enter_blocking(&gamecube_data_mtx);
         gamecube_data.report.a = report->a ? 1 : 0;
@@ -87,6 +99,15 @@ static jiangtun_bool_t gamecube_send(jiangtun_board_t *board,
 
         gamecube_data_reset = report->reset ? true : false;
         mutex_exit(&gamecube_data_mtx);
+
+        if (!is_initialized) {
+            write_at_least_once = false;
+            mutex_init(&write_at_least_once_mtx);
+        } else {
+            mutex_enter_blocking(&write_at_least_once_mtx);
+            write_at_least_once = false;
+            mutex_exit(&write_at_least_once_mtx);
+        }
     }
 
     return JIANGTUN_TRUE;
@@ -147,7 +168,8 @@ void loop() { jiangtun_loop(&j); }
 
 void setup1() {
     servo.attach(PIN_SERVO, 500, 2400);
-    while (!mutex_is_initialized(&gamecube_data_mtx))
+    /* Do not start `loop1` until the first `gamecube_send` (press start) */
+    while (!mutex_is_initialized(&write_at_least_once_mtx))
         ;
 }
 
@@ -156,8 +178,10 @@ void loop1() {
     bool ret = gamecube.write(gamecube_data);
     bool reset = gamecube_data_reset;
     mutex_exit(&gamecube_data_mtx);
+
     if (!ret) {
         Serial.println("[core2]\tfailed to send report");
+        return;
     }
 
     if (!(current_reset_state) && reset) {
@@ -169,4 +193,8 @@ void loop1() {
         pinMode(PIN_RESET, INPUT);
     }
     current_reset_state = reset;
+
+    mutex_enter_blocking(&write_at_least_once_mtx);
+    write_at_least_once = true;
+    mutex_exit(&write_at_least_once_mtx);
 }

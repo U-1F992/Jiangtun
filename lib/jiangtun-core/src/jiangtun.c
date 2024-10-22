@@ -147,7 +147,7 @@ static jiangtun_bool_t process_input(jiangtun_t *j,
         jiangtun_command_push(j->commands[i], c);
         if (jiangtun_command_accepted(j->commands[i])) {
             sprintf(j->buffer, "command #%lu accepted", (unsigned long)i);
-            serial_log(j, JIANGTUN_LOG_LEVEL_INFO, j->buffer);
+            serial_log(j, JIANGTUN_LOG_LEVEL_DEBUG, j->buffer);
 
             if (!jiangtun_command_run(j->commands[i], &(j->reports[i]))) {
                 serial_log(j, JIANGTUN_LOG_LEVEL_WARN,
